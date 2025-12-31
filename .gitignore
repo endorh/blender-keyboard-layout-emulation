@@ -1,0 +1,20 @@
+# Temp files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Build files
+build/
+
+# Virtual environment
+.venv/
+
+# IDEs and editors
+/.idea/
+/.vscode/
+*.swp
+*.swo
+
+# Local development settings
+.env
+.env.local
