@@ -10,7 +10,7 @@ from bpy.types import AddonPreferences, Operator, Panel, PropertyGroup
 from .keyboard_layout import is_built_in_layout
 from .preferences import kle_prefs, KLEPreferencesUnavailableException
 from .operators import KLEOperators
-from .constants import kle_logger
+from .constants import KLELinks, kle_logger
 
 is_mac = sys.platform == 'darwin'
 
@@ -157,6 +157,7 @@ def draw_in_keymap_prefs(self, context):
         header_right = header.row(align=False)
         header_right.alignment = 'RIGHT'
         header_right.operator(KLEOperators.Info.addon_info, text="More info", icon='QUESTION', emboss=False)
+        header_right.operator("wm.url_open", text="Help", icon='URL').url = KLELinks.help
         row = sub.column(align=False)
         split = row.split(factor=0.52, align=False)
         left, right = split.column(align=False), split.column(align=False)
@@ -190,7 +191,7 @@ def draw_in_keymap_prefs(self, context):
         right_r.prop(prefs, "reapply_on_reload_delay", text="Delay")
         split = right.row().split(factor=0.65, align=True)
         right_l, right_r = split.column(align=True), split.column(align=True)
-        right_l.prop(prefs, "detect_addon_changes", text="Detect addon installation")
+        right_l.prop(prefs, "detect_addon_changes", text="Detect add-on installation")
         right_r.enabled = prefs.detect_addon_changes
         right_r.prop(prefs, "detect_addon_changes_polling_interval", text="Interval")
 
@@ -221,11 +222,11 @@ def draw_in_keymap_prefs(self, context):
         right.alignment = 'RIGHT'
         ir = right.row(align=True)
         # ir.enabled = is_layout_editable
-        op = ir.operator(KLEOperators.import_layout_json, text="Import Layout...", icon='IMPORT')
+        op = ir.operator(KLEOperators.import_layout_json, text="Import layout...", icon='IMPORT')
         op.layout_name = layout_name if is_layout_editable else ''
         op.filepath = f"{layout_name}.json"
         er = right.row(align=True)
-        op = er.operator(KLEOperators.export_layout_json, text="Export Layout...", icon='EXPORT')
+        op = er.operator(KLEOperators.export_layout_json, text="Export layout...", icon='EXPORT')
         op.layout = layout_name
         op.filepath = f"{layout_name}.json"
 
@@ -332,18 +333,30 @@ _addon_check_scheduled = False
 
 def draw_in_addons_prefs(self, context):
     """
-    Prepended block shown in addons preferences panel.
+    Prepended block shown in the add-ons preferences panel.
 
     We do not show any UI, this draw code is simply installed to get draw updates
     from the add-ons panel.
     """
+    on_addon_menu_draw_call(context)
+
+def draw_in_extensions_prefs(self, context):
+    """
+    Prepended block shown in the extensions preferences panel.
+
+    We do not show any UI, this draw code is simply installed to get draw updates
+    from the extensions panel.
+    """
+    on_addon_menu_draw_call(context)
+
+def on_addon_menu_draw_call(context):
     global _addon_check_scheduled, _last_addons_prefs_draw_time, _last_addons_prefs_poll_time
 
     prefs = kle_prefs(context)
     if not prefs.detect_addon_changes or not prefs.is_emulation_active:
         return
 
-    # kle_logger.debug(f"... addons prefs draw call")
+    # kle_logger.debug(f"... add-ons prefs draw call")
 
     poll_interval = prefs.detect_addon_changes_polling_interval
     if poll_interval <= 0:
@@ -370,8 +383,8 @@ def scheduled_addon_changes_poll():
             # kle_logger.debug(f"    last")
         addon_changes_poll()
     except KLEPreferencesUnavailableException:
-        # Handler triggered after addon was uninstalled, skip
-        kle_logger.debug("! Skipped addon changes poll, addon preferences unavailable. Addon was likely disabled/uninstalled.")
+        # Handler triggered after add-on was uninstalled, skip
+        kle_logger.debug("! Skipped add-on changes poll, add-on preferences unavailable. Add-on was likely disabled/uninstalled.")
         return
 
 def get_current_set_of_addons(context=...) -> set[str]:
@@ -404,13 +417,22 @@ def on_detect_addons_changes_update(context=...):
     prefs = kle_prefs(context)
     if prefs.detect_addon_changes != _addons_draw_hook_installed:
         if _addons_draw_hook_installed:
-            bpy.types.USERPREF_PT_addons.remove(draw_in_addons_prefs)
+            remove_addons_menu_draw_hooks()
             _addons_draw_hook_installed = False
-            # kle_logger.debug(f"! Removed addons draw hook")
         else:
-            bpy.types.USERPREF_PT_addons.prepend(draw_in_addons_prefs)
+            append_addons_menu_draw_hooks()
             _addons_draw_hook_installed = True
-            # kle_logger.debug(f"! Installed addons draw hook")
+
+
+def append_addons_menu_draw_hooks():
+    bpy.types.USERPREF_PT_addons.prepend(draw_in_addons_prefs)
+    bpy.types.USERPREF_PT_extensions.prepend(draw_in_extensions_prefs)
+    # kle_logger.debug(f"! Installed addons draw hook")
+
+def remove_addons_menu_draw_hooks():
+    bpy.types.USERPREF_PT_addons.remove(draw_in_addons_prefs)
+    bpy.types.USERPREF_PT_extensions.remove(draw_in_extensions_prefs)
+    # kle_logger.debug(f"! Removed addons draw hook")
 
 
 def register():
@@ -427,5 +449,5 @@ def unregister():
     bpy.types.USERPREF_PT_keymap.remove(draw_in_keymap_prefs)
 
     if _addons_draw_hook_installed:
-        bpy.types.USERPREF_PT_addons.remove(draw_in_addons_prefs)
+        remove_addons_menu_draw_hooks()
         _addons_draw_hook_installed = False

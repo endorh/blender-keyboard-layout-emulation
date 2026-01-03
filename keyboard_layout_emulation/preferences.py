@@ -5,7 +5,7 @@ import logging
 
 import bpy
 
-from typing import Any, Optional, List, Tuple, Dict, TYPE_CHECKING, Literal
+from typing import Any, Optional, List, Tuple, Dict, TYPE_CHECKING, Literal, TypeAlias, Iterator, Callable
 import json
 
 # noinspection PyUnresolvedReferences
@@ -22,6 +22,8 @@ __all__ = [
     # Preferences classes
     'KLEUIStateProperties',
     'KLEPreferences',
+    'KmiFingerprint',
+    'KmiAssignmentDiff',
     # Exceptions
     'KLEPreferencesUnavailableException',
     # Accessors
@@ -31,14 +33,12 @@ __all__ = [
     'is_remappable_keymap_item',
     'is_remapped_keymap_item',
     'layout_enum_items',
-    'are_operator_properties_compatible',
     # Serialization utils
     'json_cached_loads',
-    'json_set_loads',
-    'json_set_dumps',
+    'json_decode_loads',
+    'json_encode_dumps',
     'keyed_operator_properties',
     'keymap_id',
-    'kmi_signature',
     'kmi_modifier_string',
     'operator_properties_to_dict',
     'operator_property_value_to_dict',
@@ -54,10 +54,16 @@ if TYPE_CHECKING:
     def FloatProperty(*_, **__) -> Literal[float]: ...
     def PointerProperty(*_, **__) -> Any: ...
 
+
+KeyMap: TypeAlias = bpy.types.KeyMap
+KeyMapItem: TypeAlias = bpy.types.KeyMapItem
+KeyConfig: TypeAlias = bpy.types.KeyConfig
+
+
 keyed_operator_properties = {'name', 'data_path'}
 
 _json_cache: Dict[str, Tuple[str, Any]] = {}
-def json_cached_loads(cache_key: str, s: str, *, deserialize_list_encoded_sets=False, **kwargs) -> Any:
+def json_cached_loads(cache_key: str, s: str, *, decoder: Optional[Callable[[Any], Any]]=None, decode=True, **kwargs) -> Any:
     """
     Deserialize cached JSON string with optional support for list-encoded sets.
     """
@@ -67,49 +73,61 @@ def json_cached_loads(cache_key: str, s: str, *, deserialize_list_encoded_sets=F
             return cache_value
         if not s == '':
             del _json_cache[cache_key]
-    new_value = json_set_loads(s, **kwargs) if deserialize_list_encoded_sets else json.loads(s, **kwargs)
+    new_value = json_decode_loads(s, decoder=decoder, **kwargs) if decode else json.loads(s, **kwargs)
     if s:
         _json_cache[cache_key] = (s, new_value)
     return new_value
 
-def json_set_loads(s: str, **kwargs) -> Any:
+
+def json_decode_loads(s: str, *, decoder: Optional[Callable[[Any], Any]]=None, **kwargs) -> Any:
     """
-    Deserialize JSON string with support for list-encoded sets.
+    Deserialize JSON string with support for list-encoded sets,
+    applying an optional arbitrary decoder.
+
+    We cannot really do this with Python's built-in JSONEncoder/Decoder because
+    it is not possible to change the way a JSONEncoder encodes lists deep within
+    an object without fully reimplementing it
     """
-    # We cannot really do this with JSONEncoder/Decoder because
-    # it is not possible to change the way a JSONEncoder encodes
-    # lists deep within an object without fully reimplementing it
     def patch(o):
         if isinstance(o, list):
             o = [patch(oo) for oo in o]
             if len(o) > 1:
                 head = o[0]
                 if isinstance(head, str):
-                    if head == '\aset':
+                    if head == '¦set':
                         return set(o[1:])
-                    elif head.startswith('\a\a'):
+                    elif head.startswith('¦¦'):
                         o[0] = head[1:]
         elif isinstance(o, dict):
             o = {k: patch(v) for k, v in o.items()}
         return o
-    return patch(json.loads(s, **kwargs))
+    decoded = patch(json.loads(s, **kwargs))
+    if decoder is not None:
+        decoded = decoder(decoded)
+    return decoded
 
-def json_set_dumps(o: Any, ensure_ascii=False, **kwargs) -> str:
+def json_encode_dumps(o: Any, *, encoder: Optional[Callable[[Any], Any]]=None, ensure_ascii=False, sorted_sets=False, **kwargs) -> str:
     """
-    Serialize JSON string with support for list-encoded sets.
+    Serialize JSON string with support for list-encoded sets,
+    applying an optional encoder.
     """
     def patch(oo):
         if isinstance(oo, set):
-            oo = ['\aset'] + [patch(oo) for oo in oo]
-        elif isinstance(oo, list):
+            ol = [patch(oo) for oo in oo]
+            if sorted_sets:
+                ol.sort()
+            oo = ['¦set'] + ol
+        elif isinstance(oo, (list, tuple)):
             oo = [patch(oo) for oo in oo]
             if len(oo) > 0:
                 head = oo[0]
-                if isinstance(head, str) and head.startswith('\a'):
-                    oo[0] = f'\a{head}'
+                if isinstance(head, str) and head.startswith('¦'):
+                    oo[0] = f'¦{head}'
         elif isinstance(oo, dict):
             oo = {k: patch(v) for k, v in oo.items()}
         return oo
+    if encoder is not None:
+        o = encoder(o)
     return json.dumps(patch(o), ensure_ascii=ensure_ascii, **kwargs)
 
 def kle_prefs(context=...) -> KLEPreferences:
@@ -186,88 +204,177 @@ def compact_operator_properties(properties: Dict[str, Any]) -> Optional[Dict[str
     return compacted if compacted else None
 
 
-def are_operator_properties_compatible(props1, stored_props) -> bool:
-    return compact_operator_properties(operator_properties_to_dict(props1)) == stored_props
-
-
 def kmi_modifier_string(kmi) -> str:
     hyper, oskey, ctrl, alt, shift = [getattr(kmi, name) for name in ('hyper', 'oskey', 'ctrl', 'alt', 'shift')]
     key_mod = kmi.key_modifier
     def op_ch(op, ch) -> str:
         return f"{'~' if op < 0 else ''}{ch}" if op != 0 else ""
-    return f"{op_ch(hyper, '@')}{op_ch(oskey, '#')}{op_ch(ctrl, '^')}{op_ch(alt, '!')}{op_ch(shift, '+')}{key_mod if key_mod != 'NONE' else ''}"
+    return f"{op_ch(hyper, '@')}{op_ch(oskey, '#')}{op_ch(ctrl, '^')}{op_ch(alt, '!')}{op_ch(shift, '+')}{key_mod if key_mod != 'NONE' else ''}{'*' if kmi.repeat else ''}"
 
 
-def kmi_signature(kmi) -> Dict[str, Any]:
-    s = {}
-    properties = getattr(kmi, 'properties', None)
-    if properties is not None:
-        props = operator_properties_to_dict(properties)
-        stored_props = compact_operator_properties(props)
-        if stored_props:
-            s['p'] = stored_props
-            if stored_props != dict(stored_props):
-                kle_logger.warn(f"  ! non-self-comparable properties: {kmi.idname} " + json_set_dumps(stored_props, indent=2).replace('\n', '\n    '))
-    propvalue = getattr(kmi, 'propvalue', 'NONE')
-    if propvalue != 'NONE':
-        s['pv'] = propvalue
-    return s
+@dataclass
+class KmiFingerprint:
+    # idname is used as key in the remapped keys hierarchy for faster lookup
+    properties: Optional[Dict[str, Any]]
+    propvalue: Optional[str]
+    active: bool
+
+    @classmethod
+    def from_kmi(cls, kmi) -> KmiFingerprint:
+        stored_props = None
+        properties = getattr(kmi, 'properties', None)
+        if properties is not None:
+            props = operator_properties_to_dict(properties)
+            stored_props = compact_operator_properties(props)
+            if stored_props:
+                if kle_logger.isEnabledFor(logging.DEBUG) and stored_props != dict(stored_props):
+                    kle_logger.debug(f"  ! non-self-comparable properties: {kmi.idname} " + json_encode_dumps(stored_props, indent=2).replace('\n', '\n    '))
+            else:
+                stored_props = None
+        propvalue = getattr(kmi, 'propvalue', 'NONE')
+        if propvalue == 'NONE':
+            propvalue = None
+        return cls(stored_props, propvalue, kmi.active)
+
+    @classmethod
+    def decode_json(cls, s) -> KmiFingerprint:
+        i, l = 0, len(s)
+        if i < l and isinstance(s[i], dict):
+            properties = s[i]
+            i += 1
+        else:
+            properties = None
+        if i < l and isinstance(s[i], str):
+            propvalue = s[i]
+            i += 1
+        else:
+            propvalue = None
+        if i < l and isinstance(s[i], bool):
+            active = s[i]
+            i += 1
+        else:
+            active = True
+        return cls(properties, propvalue, active)
+
+    @classmethod
+    def encode_json(cls, self) -> Any:
+        s = []
+        if self.properties:
+            s.append(self.properties)
+        if self.propvalue is not None:
+            s.append(self.propvalue)
+        if not self.active:
+            s.append(False)
+        return s
+
+    def __eq__(self, other):
+        return self.properties == other.properties and self.propvalue == other.propvalue and self.active == other.active
 
 
-def resolve_remapped_keymap_item(kmi, per_op_kmi) -> Optional[Any]:
-    # op = kmi.idname
-    # if op not in remapped_km_journal:
-    #     kle_logger.debug(f"  ! operator '{op}' not found in remapped keymap journal")
-    #     return None
-    # per_op_kmi = remapped_km_journal[op]
-    kmi_properties = compact_operator_properties(operator_properties_to_dict(kmi.properties))
-    kmi_propvalue = kmi.propvalue if kmi.propvalue != 'NONE' else None
-    compatible = [s for s in per_op_kmi if kmi_properties == s.get('p', None) and kmi_propvalue == s.get('pv', None)]
+@dataclass
+class KmiAssignmentDiff:
+    modifiers: str
+    source_char: str
+    target_char: str
+    value: str = 'PRESS'
+
+    @classmethod
+    def from_kmi_and_translation(cls, kmi, translation: LayoutTranslation) -> KmiAssignmentDiff:
+        source_char = event_type_to_char(kmi.type)
+        return cls.from_kmi_and_chars(kmi, source_char, translation.map_input_to_output(source_char))
+    @classmethod
+    def from_kmi_and_types(cls, kmi, source_type, target_type) -> KmiAssignmentDiff:
+        return cls.from_kmi_and_chars(kmi, event_type_to_char(source_type), event_type_to_char(target_type))
+    @classmethod
+    def from_kmi_and_chars(cls, kmi, source_char, target_char) -> KmiAssignmentDiff:
+        return cls(kmi_modifier_string(kmi), source_char, target_char, kmi.value)
+
+    @classmethod
+    def decode_json(cls, s) -> KmiAssignmentDiff:
+        i, l = 0, len(s)
+        if i < l and isinstance(s[i], str):
+            modifiers = s[i]
+            i += 1
+        else:
+            modifiers = ''
+        if i < l and isinstance(s[i], str):
+            source_char = s[i]
+            i += 1
+        else:
+            source_char = ''
+        if i < l and isinstance(s[i], str):
+            target_char = s[i]
+            i += 1
+        else:
+            target_char = ''
+        if i < l and isinstance(s[i], str):
+            value = s[i]
+            i += 1
+        else:
+            value = 'PRESS'
+        return cls(modifiers, source_char, target_char, value)
+    @classmethod
+    def encode_json(cls, self) -> list[Any]:
+        s = [self.modifiers, self.source_char, self.target_char]
+        if self.value != 'PRESS':
+            s.append(self.value)
+        return s
+
+
+def resolve_remapped_keymap_item(kmi, per_op_kmi) -> Optional[Tuple[KmiFingerprint, KmiAssignmentDiff]]:
+    test_fingerprint = KmiFingerprint.from_kmi(kmi)
+    compatible = [t for t in per_op_kmi if test_fingerprint == t[0]]
     if len(compatible) == 1:
+        # Single candidate, resolve to it
         return compatible[0]
     elif not compatible:
         kle_logger.debug(
-            f"  ! non compatible properties!! ({kmi.idname})\n" +
-            f"    props: " + json_set_dumps(kmi_properties, indent=2).replace('\n', '\n    ') + '\n' +
-            f"    propvalue: {kmi_propvalue}\n" +
-            f"    compatible: " + json_set_dumps(per_op_kmi, indent=2).replace('\n', '\n   ')
+            f"  ! no compatible fingerprint found!! ({kmi.idname})\n" +
+            f"    test: {test_fingerprint}" + json_encode_dumps(KmiFingerprint.encode_json(test_fingerprint), indent=2).replace('\n', '\n    ') + '\n' +
+            f"    candidates: " + json_encode_dumps([
+                [KmiFingerprint.encode_json(fingerprint), KmiAssignmentDiff.encode_json(diff)]
+                for fingerprint, diff in per_op_kmi
+            ], indent=2).replace('\n', '\n   ')
         )
         return None
-
-    # kle_logger.debug(f"  > compatible properties")
+    # kle_logger.debug(f"  > more than one compatible fingerprint")
 
     kmi_char = event_type_to_char(kmi.type)
 
-    compatible_after = [s for s in compatible if kmi_char == s['t']]
+    # Compare keys before modifiers
+    compatible_after = [t for t in compatible if kmi_char == t[1].target_char]
     if len(compatible_after) == 1:
         return compatible_after[0]
-    compatible_before = [s for s in compatible if kmi_char == s['s']]
+    compatible_before = [t for t in compatible if kmi_char == t[1].source_char]
     if len(compatible_before) == 1:
         return compatible_before[0]
 
     # Already some built-in shortcuts exist with duplicates that only differ in modifiers
     kmi_modifier = kmi_modifier_string(kmi)
-    compatible = [s for s in compatible if kmi_modifier == s['m']]
+    compatible = [t for t in compatible if kmi_modifier == t[1].modifiers and kmi.value == t[1].value]
     if len(compatible) == 1:
         return compatible[0]
     elif not compatible:
         return None
 
-    compatible_after = [s for s in compatible if kmi_char == s['t']]
+    # Compare keys after modifiers
+    compatible_after = [t for t in compatible if kmi_char == t[1].target_char]
     if len(compatible_after) == 1:
         return compatible_after[0]
-    compatible_before = [s for s in compatible if kmi_char == s['s']]
+    compatible_before = [t for t in compatible if kmi_char == t[1].source_char]
     if len(compatible_before) == 1:
         return compatible_before[0]
 
     if len(compatible_after) > 1 or len(compatible_before) > 1:
         kle_logger.debug(f"  ! multiple remapped keymap items found for operator '{kmi.idname}': {compatible_after or compatible_before}")
+        # return compatible_after[0] if compatible_after else compatible_before[0]
     return None
 
 
 # It is important to ensure that strings returned by enum providers are kept referenced in Python.
 # See https://docs.blender.org/api/5.0/bpy.props.html#bpy.props.EnumProperty
-_layout_items_strings__desc_built_in = 'Built-in layout'
+# The keys in `prefs.custom_layouts` are kept referenced until they change,
+# thanks to the cached JSON decoder.
 _layout_items_strings__desc_custom = 'User-defined keyboard layout'
 def layout_enum_items(self, context) -> List[Tuple[str, str, str]]:
     """Enum provider for the layout dropdown in Add-on Preferences."""
@@ -287,6 +394,7 @@ def layout_enum_items(self, context) -> List[Tuple[str, str, str]]:
     return items
 
 
+# Property update handlers
 def on_current_input_layout_update(self, context):
     prefs = kle_prefs(context)
     ui_state = prefs.ui_state(context)
@@ -324,56 +432,52 @@ def on_logging_level_update(self=..., context=...):
         logging.ERROR
     )
 
+
+# Compound property helpers
 def is_subkey_expanded(subkey, lst):
     return subkey in lst.splitlines()
 
 
 class KLEUIStateProperties(PropertyGroup):
     """
-    Transient UI state of the KLE addon, which needs not be saved.
+    Transient UI state of the KLE add-on, which needs not be saved.
     """
 
     layout_editor_visible: BoolProperty(
         name="Show Layout Editor",
-        description="Show/hide the keyboard layout editor, within the Keymap preferences panel",
+        description="Show keyboard layout editor",
         default=False,
     )
     keymaps_panel_preferences_visible: BoolProperty(
         name="Show Keyboard Layout Emulation preferences",
-        description="Show/hide the settings panel for the addon in the keymaps preferences panel",
+        description="Show keyboard layout emulation preferences",
     )
 
-    # is_emulation_applied: BoolProperty(
-    #     name="Emulation applied",
-    #     description="Whether emulation has been applied at least once this session.",
-    #     default=False,
-    # )
-
     revert_on_uninstall: BoolProperty(
-        name="Revert keyboard layout emulation when disabling/uninstalling this addon.",
-        description="By default, keyboard layout emulation is automatically reverted whenever you disable/uninstall the Keyboard Layout Emulation addon.\n\nOnly uncheck this option if you want to uninstall the addon while keeping the remapped keymaps as they are",
+        name="Revert keyboard layout emulation when disabling/uninstalling this extension.",
+        description="By default, keyboard layout emulation is automatically reverted whenever you disable/uninstall the Keyboard Layout Emulation extension.\n\nOnly uncheck this option if you want to uninstall the extension while keeping the remapped keymaps as they are",
         default=True,
     )
 
     uninstall_options_visible: BoolProperty(
         name="Show Uninstall options",
-        description="Show/hide the uninstall options panel, within the addon preferences UI",
+        description="Show content",
         default=False,
     )
 
     preferences_debug_visible: BoolProperty(
         name="Show Add-on Preferences Debug",
-        description="Show/hide the addon preferences debug panel, within the addon preferences UI",
+        description="Show content",
         default=False,
     )
     preferences_debug_custom_layouts_visible: BoolProperty(
         name="Show Custom Layouts Debug",
-        description="Show/hide the custom layouts debug panel, within the addon preferences UI",
+        description="Show content",
         default=False,
     )
     preferences_debug_general_prefs_visible: BoolProperty(
         name="Show Preferences Debug",
-        description="Show/hide the preferences debug panel, within the addon preferences UI",
+        description="Show content",
         default=False,
     )
     preferences_debug_custom_layouts_expanded_subkeys: StringProperty(
@@ -383,7 +487,7 @@ class KLEUIStateProperties(PropertyGroup):
     )
     preferences_debug_remapped_keymaps_visible: BoolProperty(
         name="Show Remapped Keymaps Debug",
-        description="Show/hide the remapped keymaps debug panel, within the addon preferences UI",
+        description="Show content",
         default=False,
     )
     preferences_debug_remapped_keymaps_expanded_subkeys: StringProperty(
@@ -421,6 +525,32 @@ class KLEUIStateProperties(PropertyGroup):
         default=0,
         update=on_current_target_layout_update,
     )
+
+def decode_remapped_keys(remapped):
+    return {
+        keymap_id: {
+            op_id: [
+                (KmiFingerprint.decode_json(item[0]), KmiAssignmentDiff.decode_json(item[1]))
+                for item in op_items
+                if isinstance(item, list) and len(item) == 2 and isinstance(item[0], list) and isinstance(item[1], list)
+            ]
+            for op_id, op_items in keymap_items.items()
+            if isinstance(op_id, str) and isinstance(op_items, list) and op_items
+        }
+        for keymap_id, keymap_items in remapped.items()
+        if isinstance(keymap_id, str) and isinstance(keymap_items, dict) and keymap_items
+    } if remapped is not None else None
+def encode_remapped_keys(remapped):
+    return {
+        keymap_id: {
+            op_id: [
+                (KmiFingerprint.encode_json(fingerprint), KmiAssignmentDiff.encode_json(diff))
+                for fingerprint, diff in op_items
+            ]
+            for op_id, op_items in keymap_items.items()
+        }
+        for keymap_id, keymap_items in remapped.items()
+    } if remapped is not None else None
 
 class KLEPreferences(AddonPreferences):
     """Add-on preferences storing selected layout, mappings, journal, and UI flags."""
@@ -488,7 +618,7 @@ class KLEPreferences(AddonPreferences):
         name="Reapply emulation on reload/restart",
         description=(
             "Reapply emulation whenever Blender is restarted and after a new file is loaded.\n"
-            "This ensures that other addon's keyboard shortcuts are reliably remapped.\n\n"
+            "This ensures that other add-on's keyboard shortcuts are reliably remapped.\n\n"
             "Remapped shortcuts are tracked to avoid remapping the same shortcut twice"
         ),
         default=True,
@@ -497,7 +627,7 @@ class KLEPreferences(AddonPreferences):
         name="Delay for emulation reapply on restart",
         description=(
             "Time to wait to reapply emulation a second time after restart (it is always applied immediately at least once).\n"
-            "This setting exists to ensure that keyboard shortcuts registered later by addons are also reliably remapped.\n"
+            "This setting exists to ensure that keyboard shortcuts registered later by add-ons are also reliably remapped.\n"
             "Individual shortcuts are tracked to avoid remapping the same shortcut twice.\n"
             "Set to 0 to only reapply once"
         ),
@@ -505,19 +635,19 @@ class KLEPreferences(AddonPreferences):
         subtype='TIME_ABSOLUTE', unit='TIME_ABSOLUTE',
     )
     detect_addon_changes: BoolProperty(
-        name="Detect changes to installed addons to reapply emulation",
+        name="Detect changes to installed add-ons to reapply emulation",
         description=(
-            "Detect changes to installed addons and automatically reapply emulation.\n"
-            "This ensures that the keyboard shortcuts of newly installed addons are immediately remapped.\n\n"
+            "Detect changes to installed add-ons and automatically reapply emulation.\n"
+            "This ensures that the keyboard shortcuts of newly installed add-ons are immediately remapped.\n\n"
             "Changes are detected by polling the set of active add-ons on a timer, but only while the 'Preferences > Add-ons' panel is being updated, so this setting should not negatively affect performance"
         ),
         default=True,
         update=on_detect_addons_changes_update,
     )
     detect_addon_changes_polling_interval: FloatProperty(
-        name="Polling interval for detecting changes to installed addons",
+        name="Polling interval for detecting changes to installed add-ons",
         description=(
-            "Polling interval used to detect installed addons.\n\n"
+            "Polling interval used to detect installed add-ons.\n\n"
             "Regardless of this setting, polling only occurs while the 'Preferences > Add-ons' panel is being updated.\n"
             "Set to 0 to poll on every draw call of the panel."
         ),
@@ -581,7 +711,7 @@ class KLEPreferences(AddonPreferences):
     def custom_layouts(self) -> Dict[str, Dict[str, str]]:
         # TODO: Ideally this would return a frozenmap to enforce setter semantics, but Python's not there yet
         json_value = self.custom_layouts_json
-        d = json_cached_loads('kle_prefs:custom_layouts', json_value) if json_value else {}
+        d = json_cached_loads('kle_prefs:custom_layouts', json_value, decode=False) if json_value else {}
         if not isinstance(d, dict):
             return {}
         for name in LayoutTranslation.built_in:
@@ -679,36 +809,24 @@ class KLEPreferences(AddonPreferences):
     def remapped_keys(self) -> Optional[Dict[str, Any]]:
         # TODO: Ideally this would return a frozenmap to enforce setter semantics, but Python's not there yet
         d = json_cached_loads(
-            'kle_prefs:remapped_keys', self.remapped_keys_json, deserialize_list_encoded_sets=True
+            'kle_prefs:remapped_keys', self.remapped_keys_json,
+            decoder=decode_remapped_keys,
         ) if self.remapped_keys_json else {}
         return d if isinstance(d, dict) and d else {}
     @remapped_keys.setter
     def remapped_keys(self, value: Dict[str, Any]):
-        self.remapped_keys_json = json_set_dumps(value)
-
-    def get_remapped_keymaps(self) -> Optional[Dict[str, Any]]:
-        keymaps = self.remapped_keys
-        if not isinstance(keymaps, dict):
-            return None
-        removed_keymaps = []
-        for keymap_key, items in keymaps.items():
-            if not isinstance(keymap_key, str) or not isinstance(items, dict) or not items:
-                removed_keymaps.append(keymap_key)
-        for removed_keymap in removed_keymaps:
-            del keymaps[removed_keymap]
-        return keymaps if keymaps else None
-
+        self.remapped_keys_json = json_encode_dumps(value, encoder=encode_remapped_keys)
 
     def ui_state(self, context=...) -> KLEUIStateProperties:
         if context is ...:
             context = bpy.context
         return context.window_manager.kle_ui_state
 
-    def remapped_keymap_items(self, context=...):
+    def remapped_keymap_items(self, context=...) -> Iterator[Tuple[KeyMap, KeyMapItem, KmiFingerprint, KmiAssignmentDiff]]:
         if context is ...:
             context = bpy.context
-        remapped_keymaps = self.get_remapped_keymaps()
-        if remapped_keymaps is None:
+        remapped_keymaps = self.remapped_keys
+        if not remapped_keymaps:
             return
         kcs = get_current_keyconfig_set(context)
 
@@ -727,22 +845,22 @@ class KLEPreferences(AddonPreferences):
                 remapped_op = remapped_km[op]
                 rs = resolve_remapped_keymap_item(kmi, remapped_op)
                 if rs is not None:
-                    yield km, kmi, rs
+                    yield km, kmi, rs[0], rs[1]
                 else:
                     kle_logger.debug(
                         f"  ! unresolved kmi: {kmi.idname} ({kmi.name}) -> {kmi_modifier_string(kmi)} & {kmi.type}\n" +
-                        f"    props: " + json_set_dumps(
-                            compact_operator_properties(operator_properties_to_dict(kmi.properties)), indent=2
-                        ).replace('\n', '\n    ') + '\n' +
-                        f"    candidates: " + json_set_dumps(remapped_op, indent=2).replace('\n', '\n    ')
+                        f"    fingerprint: " + json_encode_dumps(KmiFingerprint.encode_json(KmiFingerprint.from_kmi(kmi)), indent=2).replace('\n', '\n    ') + '\n' +
+                        f"    candidates: " + json_encode_dumps([
+                            [KmiFingerprint.encode_json(fingerprint), KmiAssignmentDiff.encode_json(diff)]
+                            for fingerprint, diff in remapped_op
+                        ], indent=2).replace('\n', '\n    ')
                     )
 
-
-    def pending_keymaps_to_emulate(self, context=...):
+    def pending_keymaps_to_emulate(self, context=...) -> Iterator[Tuple[KeyMap, KeyMapItem, Optional[KmiFingerprint], Optional[KmiAssignmentDiff]]]:
         if context is ...:
             context = bpy.context
-        remapped_keymaps = self.get_remapped_keymaps()
-        if remapped_keymaps is None:
+        remapped_keymaps = self.remapped_keys
+        if not remapped_keymaps:
             remapped_keymaps = {}
         kcs = get_current_keyconfig_set(context)
         # user_keymap_names = {km.name for km in kcs.user.keymaps}
@@ -761,7 +879,7 @@ class KLEPreferences(AddonPreferences):
                         #         f"     props: " + json_set_dumps(compact_operator_properties(operator_properties_to_dict(kmi.properties)), indent=2).replace('\n', '\n    ') + '\n' +
                         #         f"     candidates: " + ', '.join(remapped_keymaps.keys())
                         #     )
-                        yield km, kmi, None
+                        yield km, kmi, None, None
             else:
                 remapped_km = remapped_keymaps[km_id]
                 for kmi in km.keymap_items:
@@ -775,17 +893,22 @@ class KLEPreferences(AddonPreferences):
                         #         # f"     props: " + json_set_dumps(compact_operator_properties(operator_properties_to_dict(kmi.properties)), indent=2).replace('\n', '\n    ') + '\n' +
                         #         f"     candidates: " + ', '.join(remapped_km.keys())
                         #     )
-                        yield km, kmi, None
+                        yield km, kmi, None, None
                         continue
                     rs = resolve_remapped_keymap_item(kmi, remapped_km[op])
-                    if rs is None or event_type_to_char(kmi.type) == rs.get('s', None):
-                        # if kmi.idname == 'node.duplicate_move_linked':
-                        #     kle_logger.debug(
-                        #         f"  !! unresolved duplicate kmi: {rs}, ({kmi.type})\n" +
-                        #         f"     props: " + json_set_dumps(compact_operator_properties(operator_properties_to_dict(kmi.properties)), indent=2).replace('\n', '\n    ') + '\n' +
-                        #         f"     candidates: " + json_set_dumps(remapped_km[op], indent=2).replace('\n', '\n    ')
-                        #     )
-                        yield km, kmi, rs
+                    if rs is None:
+                        yield km, kmi, None, None
+                    else:
+                        fingerprint, diff = rs
+                        if event_type_to_char(kmi.type) == diff.source_char:
+                            # if kmi.idname == 'node.duplicate_move_linked':
+                            #     kle_logger.debug(
+                            #         f"  !! unresolved duplicate kmi: {rs}, ({kmi.type})\n" +
+                            #         f"     props: " + json_set_dumps(compact_operator_properties(operator_properties_to_dict(kmi.properties)), indent=2).replace('\n', '\n    ') + '\n' +
+                            #         f"     candidates: " + json_set_dumps(remapped_km[op], indent=2).replace('\n', '\n    ')
+                            #     )
+                            yield km, kmi, fingerprint, diff
+
     def has_pending_keymaps_to_emulate(self):
         return next(self.pending_keymaps_to_emulate(), None) is not None
     def bounded_number_of_pending_keymaps_to_emulate(self, limit: int = 100) -> Optional[int]:
@@ -826,7 +949,7 @@ class KLEPreferences(AddonPreferences):
         header_left.alignment = 'LEFT'
         header_left.prop(
             ui_state, "preferences_debug_visible",
-            text="Debug addon preferences", emboss=False,
+            text="Debug add-on preferences", emboss=False,
             icon=arrow_icon(ui_state.preferences_debug_visible))
 
         ir = header_right.row(align=True)
@@ -858,17 +981,20 @@ class KLEPreferences(AddonPreferences):
                 _, right = split.column(), split.column()
                 right.label(text=f"preferred_input_layout: {self.hidden__preferred_input_layout}", icon='DOT')
                 right.label(text=f"preferred_target_layout: {self.hidden__preferred_target_layout}", icon='DOT')
-                right.label(text=f"reapply_on_keymaps_panel: {self.reapply_on_keymaps_panel}", icon='DOT')
-                right.label(text=f"reapply_on_keymaps_panel_delay: {self.reapply_on_keymaps_panel_delay}", icon='DOT')
-                right.label(text=f"reapply_on_reload: {self.reapply_on_reload}", icon='DOT')
-                right.label(text=f"reapply_on_reload_delay: {self.reapply_on_reload_delay}", icon='DOT')
-                right.label(text=f"detect_addon_changes: {self.detect_addon_changes}", icon='DOT')
-                right.label(text=f"detect_addon_changes_polling_interval: {self.detect_addon_changes_polling_interval}", icon='DOT')
-                right.label(text=f"display_large_warning_button: {self.display_large_warning_button}", icon='DOT')
-                right.label(text=f"large_warning_button_style: {self.large_warning_button_style}", icon='DOT')
-                right.label(text=f"allow_key_conflicts_in_input_layout: {self.allow_key_conflicts_in_input_layout}", icon='DOT')
-                right.label(text=f"logging_level: {self.logging_level}", icon='DOT')
-                right.label(text=f"is_emulation_active: {self.is_emulation_active}", icon='DOT')
+                for prop in (
+                    'reapply_on_keymaps_panel',
+                    'reapply_on_keymaps_panel_delay',
+                    'reapply_on_reload',
+                    'reapply_on_reload_delay',
+                    'detect_addon_changes',
+                    'detect_addon_changes_polling_interval',
+                    'display_large_warning_button',
+                    'large_warning_button_style',
+                    'allow_key_conflicts_in_input_layout',
+                    'logging_level',
+                    'is_emulation_active',
+                ):
+                    right.label(text=f"{prop}: {getattr(self, prop)}", icon='DOT')
 
             header = col.row(align=True)
             header.alignment = 'LEFT'
@@ -946,13 +1072,13 @@ class KLEPreferences(AddonPreferences):
                             if op_expanded:
                                 split = ccc.row().split(factor=indent_factor)
                                 _, cccc = split.column(), split.column()
-                                for i, remap_info in enumerate(op_list):
+                                for i, (fingerprint, diff) in enumerate(op_list):
                                     info_subkey = f"{op_subkey}:{i}"
                                     info_expanded = is_subkey_expanded(info_subkey, remapped_expanded_subkeys)
                                     row = cccc.row()
                                     row.alignment = 'LEFT'
-                                    mod = remap_info['m']
-                                    text = f"{i}: {mod}{' & ' if mod and mod[-1].isalpha() else ''}{remap_info['s']} → {remap_info['t']}"
+                                    mod = diff.modifiers
+                                    text = f"{i}: {mod}{' & ' if mod and mod[-1].isalpha() else ''}{diff.source_char} → {diff.target_char}"
                                     op = row.operator(
                                         KLEOperators.debug_toggle_expanded_subkey,
                                         text=text,
@@ -965,10 +1091,13 @@ class KLEPreferences(AddonPreferences):
                                     if info_expanded:
                                         split = cccc.row().split(factor=indent_factor)
                                         _, ccccc = split.column(), split.column()
-                                        lines = json_set_dumps(remap_info, indent=2).splitlines()
-                                        if "{" in lines: lines.remove("{")
-                                        if "}" in lines: lines.remove("}")
-                                        for line in lines:
+                                        lines_f = json_encode_dumps(KmiFingerprint.encode_json(fingerprint), indent=2).splitlines()
+                                        if "[" in lines_f: lines_f.remove("[")
+                                        if "]" in lines_f: lines_f.remove("]")
+                                        if lines_f:
+                                            lines_f[-1] = lines_f[-1] + ','
+                                        line_d = json_encode_dumps(KmiAssignmentDiff.encode_json(diff))
+                                        for line in lines_f + [line_d]:
                                             ccccc.label(text=line)
 
         box = column.box()
@@ -999,7 +1128,7 @@ class KLEPreferences(AddonPreferences):
             include_custom_layouts=True,
             include_remapped_keymaps=False
     ) -> str:
-        return json_set_dumps({
+        return json_encode_dumps({
             "addon_id": addon_id,
             "preferences_version": preferences_version,
             "preferences": {
@@ -1040,7 +1169,7 @@ class KLEPreferences(AddonPreferences):
     ):
         if context is ...:
             context = bpy.context
-        imported_prefs = json_set_loads(json_prefs)
+        imported_prefs = json_decode_loads(json_prefs)
         if import_emulation_status:
             from .keymap_patch import reapply_keymap_translation, revert_keymap_translation
         else:
@@ -1058,7 +1187,7 @@ class KLEPreferences(AddonPreferences):
 
             # Revert emulation before import
             if import_emulation_status and self.is_emulation_active:
-                revert_keymap_translation(context, log_result=True)
+                revert_keymap_translation(context)
                 self.is_emulation_active = False
                 ui_state.is_emulation_applied = False
 
@@ -1118,7 +1247,7 @@ class KLEPreferences(AddonPreferences):
             # Reapply emulation after import
             if import_emulation_status and self.is_emulation_active:
                 translation = self.get_preferred_layout_translation()
-                reapply_keymap_translation(translation, context, log_result=True)
+                reapply_keymap_translation(translation, context)
                 ui_state.is_emulation_applied = True
 
             init_ui_state()

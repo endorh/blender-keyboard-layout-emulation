@@ -81,7 +81,7 @@ class WM_OT_kle_revert_layout_emulation(Operator):
         if prefs.is_emulation_active:
             return header + (
                 ".\n\n"
-                "Consider reverting keyboard layout emulation before editing any keymaps.\n"
+                "Consider reverting keyboard layout emulation before editing any keyboard shortcuts.\n"
                 "Keyboard layout emulation automatically modifies all of your keymaps, but it is not possible to correctly track your modifications during emulation to exempt them from being remapped on the next restart"
             ) + footer
         else:
@@ -405,13 +405,13 @@ class WM_OT_kle_import_layout_json(Operator):
 # Export/import addon preferences
 class WM_OT_kle_export_addon_preferences(Operator):
     bl_idname = KLEOperators.export_addon_preferences
-    bl_label = "Export KLE Addon Preferences"
-    bl_description = "Export the addon preferences to a JSON file"
+    bl_label = "Export KLE Add-on Preferences"
+    bl_description = "Export the add-on preferences to a JSON file"
 
     # File picker properties
     filepath: StringProperty(
         name="File Path",
-        description="Path to export the addon preferences JSON",
+        description="Path to export the add-on preferences JSON",
         default="kle_preferences.json",
         subtype='FILE_PATH',
     )
@@ -444,7 +444,7 @@ class WM_OT_kle_export_addon_preferences(Operator):
                 include_remapped_keymaps=self.include_remapped_keymaps,
             ))
 
-        self.report({'INFO'}, f"Exported addon preferences to '{self.filepath}'")
+        self.report({'INFO'}, f"Exported add-on preferences to '{self.filepath}'")
         return {'FINISHED'}
 
     def draw(self, context):
@@ -463,13 +463,13 @@ class WM_OT_kle_export_addon_preferences(Operator):
 
 class WM_OT_kle_import_addon_preferences(Operator):
     bl_idname = KLEOperators.import_addon_preferences
-    bl_label = "Import KLE Addon Preferences"
-    bl_description = "Import addon preferences from a JSON file"
+    bl_label = "Import KLE Add-on Preferences"
+    bl_description = "Import add-on preferences from a JSON file"
 
     # File picker properties
     filepath: StringProperty(
         name="File Path",
-        description="Path to import the addon preferences JSON from",
+        description="Path to import the add-on preferences JSON from",
         default="kle_preferences.json",
         subtype='FILE_PATH',
     )
@@ -526,7 +526,7 @@ class WM_OT_kle_import_addon_preferences(Operator):
                 import_remapped_keymaps=self.import_remapped_keymaps,
             )
 
-        self.report({'INFO'}, f"Imported addon preferences from '{self.filepath}'")
+        self.report({'INFO'}, f"Imported add-on preferences from '{self.filepath}'")
         return {'FINISHED'}
 
     def draw(self, context):
@@ -750,7 +750,7 @@ class WM_OT_kle_layout_unlocked_info(Operator):
         "Keyboard layout emulation lets you automatically remap your entire keymap to emulate a QWERTY keyboard layout when using a non-QWERTY keyboard layout.\n"
         "This lets you use QWERTY keyboard shortcuts while still being able to type text in Blender using your preferred keyboard layout.\n\n"
         "The remap is reapplied on every restart (taking care to not remap the same shortcut twice over).\n"
-        "This ensures that even shortcuts added by other addons are remapped reliably.\n\n"
+        "This ensures that even shortcuts added by other add-ons are remapped reliably.\n\n"
         "It is recommended that you revert the emulation before editing any keymaps"
     )
 

@@ -6,7 +6,7 @@ name = "Keyboard Layout Emulation"
 tagline = "Emulate QWERTY keyboard shortcuts on non-QWERTY keyboard layouts"
 maintainer = "Endor H"
 type = "add-on"
-# website = "https://endorh.github.io/blender-add-ons/keyboard-layout-emulation/"
+website = "https://endorh.github.io/blender-extensions/keyboard-layout-emulation/"
 tags = ["User Interface"]
 
 blender_version_min = "4.2.0"

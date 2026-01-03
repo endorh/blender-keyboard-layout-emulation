@@ -372,14 +372,6 @@ class LayoutTranslation:
 
 # Built-in layouts
 LayoutTranslation.QWERTY = LayoutTranslation.identity()
-LayoutTranslation.AZERTY = LayoutTranslation.from_qwerty_string_mapping(
-    # We don't remap `.` as `:` because Blender doesn't support `:` as an input key.
-    # However, I imagine the GHOST library translates `:` in French layouts as `.`
-    "QA  WZ  ;M,",
-    "AQ  ZW  M,;")
-LayoutTranslation.QWERTZ = LayoutTranslation.from_qwerty_string_mapping(
-    "YZ",
-    "ZY")
 LayoutTranslation.dvorak = LayoutTranslation.from_qwerty_string_mapping(
     # Blender's input pipeline treats `'` and `"` as `QUOTE`, but prefers `"` when displaying it.
     # Regrettably, we need to conform here, and write the Dvorak layout using `"` in place of `'`:
@@ -390,6 +382,14 @@ LayoutTranslation.colemak = LayoutTranslation.from_qwerty_string_mapping(
     # as an idempotent mapping anyways.
     """  QWERTYUIOP[]\  ASDFGHJKL;'  ZXCVBNM,./  """,
     """  QWFPGJLUY;[]\  ARSTDHNEIO'  ZXCVBKM,./  """)
+LayoutTranslation.AZERTY = LayoutTranslation.from_qwerty_string_mapping(
+    # We don't remap `.` as `:` because Blender doesn't support `:` as an input key.
+    # However, I imagine the GHOST library translates `:` in French layouts as `.`
+    "QA  WZ  ;M,",
+    "AQ  ZW  M,;")
+LayoutTranslation.QWERTZ = LayoutTranslation.from_qwerty_string_mapping(
+    "YZ",
+    "ZY")
 
 LayoutTranslation.built_in = {
     'QWERTY': LayoutTranslation.QWERTY,
@@ -403,11 +403,11 @@ LayoutTranslation.built_in = {
 LayoutTranslation.built_in_enum_items = (
     ('QWERTY', 'QWERTY', "Standard US-QWERTY keyboard layout"),
     None,  # Separator
-    ('AZERTY', 'AZERTY', "French AZERTY keyboard layout.\nDoes not remap `'`, `[`, `]` and `.` due to Blender's inability to represent internally accents/dollar/colon keys."),
-    ('QWERTZ', 'QWERTZ', "German QWERTZ keyboard layout.\nDoes not remap any keys with accentuated characters due to Blender's inability to represent them internally."),
-    None,  # Separator
     ('Dvorak', 'Dvorak', "Standard US-Dvorak keyboard layout.\nThe `'` key is represented as `\"` due to Blender's inability to represent it distinctly."),
     ('Colemak', 'Colemak', "Colemak keyboard layout"),
+    None,  # Separator
+    ('AZERTY', 'AZERTY', "French AZERTY keyboard layout.\nDoes not remap `'`, `[`, `]` and `.` due to Blender's inability to represent internally accents/dollar/colon keys."),
+    ('QWERTZ', 'QWERTZ', "German QWERTZ keyboard layout.\nDoes not remap any keys with accentuated characters due to Blender's inability to represent them internally."),
 )
 
 def is_built_in_layout(layout_name: str) -> bool:
