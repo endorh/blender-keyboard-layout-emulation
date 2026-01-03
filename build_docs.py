@@ -68,6 +68,20 @@ if __name__ == '__main__':
             exit(3)
 
     try:
+        # Copy the root directory
+        root_src = os.path.join(docs_dir, "root")
+        root_dest = build_dir
+        if os.path.exists(root_src):
+            shutil.copytree(root_src, root_dest, dirs_exist_ok=True)
+            print(f'Copied root directory to "{root_dest}".')
+        else:
+            print(f'No root directory found at "{root_src}".')
+    except Exception as e:
+        traceback.print_exception(e)
+        print(f'Could not copy root directory. See previous error.')
+        exit(2)
+
+    try:
         # Copy the theme subdirectory
         theme_src = os.path.join(docs_dir, "theme")
         theme_dest = os.path.join(build_dir, "theme")
