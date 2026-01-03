@@ -84,3 +84,15 @@ Unfortunately, this is not a simple *apply and forget* operation.
 
 The `Revert` button reverts the remapping, and ensures it is not reapplied
 again until you choose so.
+
+##### Gotchas
+There are a few shortcuts (e.g., `Node Editor (Global) > Duplicate`, i.e., `node.duplicate_move`)
+that experience glitches in Blender, even if you remap them yourself as a user.
+
+![Glitchy node duplicate shortcuts](images/glitchy-key-map-items-node-duplicate.png)
+
+You may notice that when you revert emulation, these shortcuts may appear as if they were
+still modified, but if you inspect them closely you will observe that they have been
+properly reverted.
+This appears to be a bug in Blender in the process of comparing these shortcuts to their
+default values.

@@ -139,7 +139,7 @@ You may inspect its current value within the
 `Preferences > Add-ons > Keyboard Layout Emulation > Debug add-on preferences > Remapped keymaps`
 section.
 
-![Debug add-on preferences > Remapped keymaps](images/debug_addon_preferences_remapped_keymaps.png)
+![Debug add-on preferences > Remapped keymaps](images/debug-addon-preferences-remapped-keymaps.png)
 
 Alternatively, the `wm.kle_export_addon_preferences` operator (the `Export...` button next to
 the `Debug add-on preferences` section) has some options (marked as only for debug), to include
