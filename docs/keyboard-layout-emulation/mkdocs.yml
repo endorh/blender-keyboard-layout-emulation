@@ -1,6 +1,6 @@
 INHERIT: ../base-mkdocs.yml
 site_name: Keyboard Layout Emulation - Blender Extension
-edit_uri: edit/main/docs/keyboard-layout-emulation/
+edit_uri: edit/main/docs/keyboard-layout-emulation/docs/
 
 nav:
   - Home: index.md
