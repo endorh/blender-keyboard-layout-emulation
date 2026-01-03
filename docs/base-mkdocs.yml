@@ -3,4 +3,4 @@ repo_url: https://github.com/endorh/blender-extensions
 
 theme: readthedocs
 extra_css:
-  - '../../theme/dark_theme_support.css'
+  - '../theme/dark_theme_support.css'
