@@ -1,4 +1,4 @@
-## Blender Extensions
+## Endor H's Blender Extensions
 This repository contains Blender extensions I develop.
 
 ### Add-ons
