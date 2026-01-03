@@ -10,7 +10,7 @@ from bpy.props import BoolProperty, StringProperty, EnumProperty
 
 from .constants import KLEOperators
 from .keyboard_layout import us_qwerty_physical_remappable_keys, event_type_to_char_or_none, is_built_in_layout
-from .preferences import kle_prefs, layout_enum_items
+from .preferences import kle_prefs, layout_enum_items, custom_layout_enum_items
 from .keymap_patch import reapply_keymap_translation, revert_keymap_translation
 
 if TYPE_CHECKING:
@@ -71,7 +71,7 @@ class WM_OT_kle_apply_layout_emulation(Operator):
 
 class WM_OT_kle_revert_layout_emulation(Operator):
     bl_idname = KLEOperators.revert_layout_emulation
-    bl_label = "Revert"
+    bl_label = "Revert Layout Emulation"
 
     @classmethod
     def description(cls, context, properties):
@@ -111,18 +111,24 @@ class WM_OT_kle_revert_layout_emulation(Operator):
 # Add/remove custom layout
 class WM_OT_kle_add_custom_layout(Operator):
     bl_idname = KLEOperators.add_custom_layout
-    bl_label = "New Layout"
+    bl_label = "New Keyboard Layout"
     bl_description = "Define a new keyboard layout"
 
-    name: StringProperty(name="Layout Name", default="Layout")
+    template: EnumProperty(
+        name="Template",
+        description="Layout to use as template",
+        items=layout_enum_items,
+        default=0,
+    )
+    name: StringProperty(
+        name="Name",
+        description="Name of the new layout",
+        default="Layout",
+    )
 
     def invoke(self, context, event):
         context.window_manager.invoke_props_dialog(self)
         return {'RUNNING_MODAL'}
-
-    def draw(self, context):
-        layout = self.layout
-        layout.prop(self, "name")
 
     def execute(self, context):
         prefs = kle_prefs(context)
@@ -138,22 +144,21 @@ class WM_OT_kle_add_custom_layout(Operator):
             self.report({'WARNING'}, "Layout with that name already exists")
             return {'CANCELLED'}
 
-        # Copy current layout
-        current_layout = prefs.preferred_input_layout
-        initial = prefs.get_layout_translation(current_layout).in_out_dict
+        # Copy template
+        initial = prefs.get_layout_translation(self.template).in_out_dict
         prefs.set_custom_layout(name, initial)
 
         # Select new layout if not locked
         if not prefs.is_emulation_active:
             prefs.ui_state(context).current_input_layout = name
 
-        self.report({'INFO'}, f"Created custom layout '{name}'")
+        self.report({'INFO'}, f"Created keyboard layout '{name}' from template '{self.template}'")
         return {'FINISHED'}
 
 
 class WM_OT_kle_remove_custom_layout(Operator):
     bl_idname = KLEOperators.remove_custom_layout
-    bl_label = "Delete Layout"
+    bl_label = "Delete Keyboard Layout"
     bl_description = (
         "Remove the currently selected input keyboard layout.\n"
         "You can only remove user-defined keyboard layouts"
@@ -206,9 +211,83 @@ class WM_OT_kle_remove_custom_layout(Operator):
         # Remove (set to None in prefs)
         prefs.set_custom_layout(layout, None)
 
-        self.report({'INFO'}, f"Deleted custom layout '{layout}'")
+        self.report({'INFO'}, f"Removed keyboard layout '{layout}'")
         return {'FINISHED'}
 
+
+class WM_OT_kle_rename_custom_layout(Operator):
+    bl_idname = KLEOperators.rename_custom_layout
+    bl_label = "Rename Keyboard Layout"
+    bl_description = "Rename this keyboard layout."
+
+    layout: EnumProperty(
+        name="Layout",
+        description="Layout to delete",
+        items=custom_layout_enum_items,
+        default=0,
+    )
+    name: StringProperty(
+        name="Name",
+        description="New name for the layout",
+        default="Layout",
+    )
+
+    def invoke(self, context, event):
+        self.name = self.layout
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        prefs = kle_prefs(context)
+        layout = self.layout
+        name = self.name
+        if not layout:
+            self.report({'WARNING'}, "No layout selected")
+            return {'CANCELLED'}
+        if is_built_in_layout(layout):
+            self.report({'WARNING'}, "Cannot rename built-in layout")
+            return {'CANCELLED'}
+        if not prefs.is_layout_editable(layout):
+            self.report({'WARNING'}, "Cannot rename layout while applied to keymaps. Revert first.")
+            return {'CANCELLED'}
+
+        if not name:
+            self.report({'WARNING'}, "New name is empty")
+            return {'CANCELLED'}
+
+        # Check current state
+        rename_input = prefs.preferred_input_layout == layout
+        rename_target = prefs.preferred_target_layout == layout
+
+        # Copy layout with new name
+        layout_value = prefs.get_custom_layout(layout)
+        if not layout_value:
+            self.report({'WARNING'}, f"Layout '{layout}' does not exist")
+            return {'CANCELLED'}
+
+        # Avoid RNA warning by switching to QWERTY first
+        ui_state = prefs.ui_state(context)
+        if rename_input:
+            ui_state.current_input_layout = 'QWERTY'
+        if rename_target:
+            ui_state.current_target_layout = 'QWERTY'
+
+        # Replace values
+        prefs.set_custom_layout(name, layout_value)
+        prefs.set_custom_layout(layout, None)
+
+        # Replace layout usages
+        print(f"UI state: {ui_state.current_input_layout}")
+        print(f"Prefs state: {prefs.preferred_input_layout}")
+
+        if rename_input:
+            prefs.preferred_input_layout = name
+            ui_state.current_input_layout = name
+        if rename_target:
+            prefs.preferred_target_layout = name
+            ui_state.current_target_layout = name
+
+        self.report({'INFO'}, f"Renamed keyboard layout '{layout}' to '{name}'")
+        return {'FINISHED'}
 
 # Import/export layout
 class WM_OT_kle_export_layout_json(Operator):
@@ -216,10 +295,11 @@ class WM_OT_kle_export_layout_json(Operator):
     bl_label = "Export JSON"
     bl_description = "Export the current layout mapping to a JSON file"
 
-    layout: StringProperty(
+    layout: EnumProperty(
+        items=layout_enum_items,
         name="Layout",
         description="Layout to export",
-        default="QWERTY"
+        default=0,
     )
     filepath: StringProperty(
         name="File Path",
@@ -789,6 +869,7 @@ _registered_classes = (
     WM_OT_kle_revert_layout_emulation,
     WM_OT_kle_add_custom_layout,
     WM_OT_kle_remove_custom_layout,
+    WM_OT_kle_rename_custom_layout,
     WM_OT_kle_export_layout_json,
     WM_OT_kle_import_layout_json,
     WM_OT_kle_export_addon_preferences,

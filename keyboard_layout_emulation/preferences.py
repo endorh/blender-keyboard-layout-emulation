@@ -33,6 +33,7 @@ __all__ = [
     'is_remappable_keymap_item',
     'is_remapped_keymap_item',
     'layout_enum_items',
+    'custom_layout_enum_items',
     # Serialization utils
     'json_cached_loads',
     'json_decode_loads',
@@ -390,8 +391,14 @@ def layout_enum_items(self, context) -> List[Tuple[str, str, str]]:
             (n, n, _layout_items_strings__desc_custom)
             for n in custom_layouts
         ]
-
     return items
+def custom_layout_enum_items(self, context) -> List[Tuple[str, str, str]]:
+    """Enum provider for the layout dropdown in the keyboard layout editor."""
+    prefs = kle_prefs(context)
+    return [
+        (n, n, _layout_items_strings__desc_custom)
+        for n in prefs.custom_layouts
+    ]
 
 
 # Property update handlers
@@ -1017,6 +1024,14 @@ class KLEPreferences(AddonPreferences):
                     )
                     op.prefs_prop = 'preferences_debug_custom_layouts_expanded_subkeys'
                     op.subkey = name
+                    row_r = row.row(align=True)
+                    row_r.alignment = 'RIGHT'
+                    op = row_r.operator(KLEOperators.import_layout_json, text="Import layout...", icon='IMPORT')
+                    op.layout_name = name
+                    op.filepath = f"{name}.json"
+                    op = row_r.operator(KLEOperators.export_layout_json, text="Export layout...", icon='EXPORT')
+                    op.layout = name
+                    op.filepath = f"{name}.json"
                     if expanded:
                         split = right.row().split(factor=indent_factor)
                         _, cc = split.column(), split.column()
@@ -1132,8 +1147,9 @@ class KLEPreferences(AddonPreferences):
             "addon_id": addon_id,
             "preferences_version": preferences_version,
             "preferences": {
-                pref: getattr(self, pref) for pref, condition in [
-                    (pref, True) if isinstance(pref, str) else pref
+                pref: encode(getattr(self, pref)) for pref, condition, encode in [
+                    (pref, True, lambda v: v) if isinstance(pref, str)
+                    else (*pref, lambda v: v) if len(pref) == 2 else pref
                     for pref in [
                         "preferred_input_layout",
                         "preferred_target_layout",
@@ -1151,7 +1167,7 @@ class KLEPreferences(AddonPreferences):
                         "logging_level",
                         "is_emulation_active",
                         ("custom_layouts", include_custom_layouts),
-                        ("remapped_keys", include_remapped_keymaps),
+                        ("remapped_keys", include_remapped_keymaps, encode_remapped_keys),
                     ]
                 ] if condition
             },
@@ -1242,7 +1258,7 @@ class KLEPreferences(AddonPreferences):
             self.custom_layouts = custom_layouts
 
             if import_remapped_keymaps:
-                self.remapped_keys = p.get('remapped_keys', {})
+                self.remapped_keys = decode_remapped_keys(p.get('remapped_keys', {}))
 
             # Reapply emulation after import
             if import_emulation_status and self.is_emulation_active:

@@ -109,7 +109,9 @@ def draw_in_keymap_prefs(self, context):
     icon_row = lr_input.row(align=False)
     icon_row.label(text="", icon="BACK")
     lr_input.prop(ui_state, "current_input_layout", text="")
-    lr_input.operator(KLEOperators.add_custom_layout, text="", icon='ADD')
+    op = lr_input.operator(KLEOperators.add_custom_layout, text="", icon='ADD')
+    op.template = layout_name
+    op.name = f"{layout_name} (copy)"
     lr_input.operator(KLEOperators.remove_custom_layout, text="", icon='REMOVE').layout = layout_name
     er = left.row(align=True)
     if not input_layout_mapping.is_valid() and not prefs.allow_key_conflicts_in_input_layout:
@@ -204,11 +206,12 @@ def draw_in_keymap_prefs(self, context):
         col.separator()
         sub = col.box()
         header = sub.row()
-        split = header.split(factor=0.6, align=True)
+        split = header.split(factor=0.6, align=False)
         left = split.row(align=True)
         right = split.row(align=True)
 
         icon = 'UNLOCKED' if is_layout_editable else 'LOCKED'
+        display_rename_button = False
         if is_built_in:
             msg = f"Use [+] above to edit a copy of this built-in layout: {layout_name}"
         elif is_emulation_active:
@@ -217,7 +220,12 @@ def draw_in_keymap_prefs(self, context):
             msg = f"Press the key [{listening_key}] should correspond to... (Esc/click to cancel)"
         else:
             msg = f"Edit layout: {layout_name}"
+            display_rename_button = True
         left.label(text=msg, icon=icon)
+        if display_rename_button:
+            op = left.operator(KLEOperators.rename_custom_layout, text="", icon='GREASEPENCIL', emboss=False)
+            op.layout = layout_name
+            op.name = layout_name
 
         right.alignment = 'RIGHT'
         ir = right.row(align=True)

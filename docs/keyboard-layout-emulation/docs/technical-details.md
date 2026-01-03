@@ -171,6 +171,9 @@ to denote a shortcut that accepts repeat events.
 > disabled if not all modifiers are set to `ignored`, and the short description of the
 > key map item assignment will only include the `required` modifiers, not the `ignored` ones.
 
+The JSON-serialized list of fingerprints takes around 100 kiB of space for Blender's
+default keymap.
+
 ### Reapplying emulation on restart
 It is a known issue that add-on's keyboard shortcuts cannot be reliably edited by users
 in Blender.
@@ -223,6 +226,11 @@ We encode sets in JSON as lists prepended with a `¦set` prefix, where
 `¦` is the broken bar character, `\u00a6`.
 We escape `¦` by duplication if it occurs as the first character of the
 first string of a list.
+
+We store the list of remapped keymap fingerprints, as well as user-defined
+keyboard layouts as JSON properties within the add-on's preferences.
+Deserialization of these properties is cached, because they are accessed during
+draw calls.
 
 ### Cool extension, why don't you fix Blender instead?
 > After all, Blender is open source. Why not fix the key map system if it is so impractical?

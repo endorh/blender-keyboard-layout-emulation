@@ -22,6 +22,7 @@ class KLEOperators:
     revert_layout_emulation = "wm.kle_revert_layout_emulation"  # WM_OT_kle_revert_layout_emulation
     add_custom_layout = "wm.kle_add_custom_layout"  # WM_OT_kle_add_custom_layout
     remove_custom_layout = "wm.kle_remove_custom_layout"  # WM_OT_kle_remove_custom_layout
+    rename_custom_layout = "wm.kle_rename_custom_layout"  # WM_OT_kle_rename_custom_layout
     export_layout_json = "wm.kle_export_layout_json"  # WM_OT_kle_export_layout_json
     import_layout_json = "wm.kle_import_layout_json"  # WM_OT_kle_import_layout_json
     export_addon_preferences = "wm.kle_export_addon_preferences"  # WM_OT_kle_export_addon_preferences
