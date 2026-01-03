@@ -41,7 +41,7 @@ class KLEOperators:
 
 class KLELinks:
     source = "https://github.com/endorh/blender-extensions/"
-    help = "https://endorh.github.com/blender-extensions/keyboard-layout-emulation/"
+    help = "https://endorh.github.io/blender-extensions/keyboard-layout-emulation/"
 
 
 _kle_logger_formatter = logging.Formatter('%(asctime)s [Keyboard Layout Emulation] %(message)s')

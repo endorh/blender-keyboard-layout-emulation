@@ -82,7 +82,7 @@ def draw_in_keymap_prefs(self, context):
     if layout_name is None:
         layout_name = 'QWERTY'
     is_built_in = is_built_in_layout(layout_name)
-    is_editable = prefs.is_layout_editable(layout_name, ignore_built_in=True)
+    is_emulation_active = prefs.is_emulation_active
     input_layout_mapping = prefs.get_layout_translation(layout_name)
     target_layout_mapping = prefs.get_layout_translation(target_layout_name)
 
@@ -93,15 +93,15 @@ def draw_in_keymap_prefs(self, context):
     # Left: dropdown + +/- + edit toggle
     # Layout selector disabled when a keymap has this layout applied
     li = left.row(align=False)
-    if not is_editable:
+    if is_emulation_active:
         li.operator(KLEOperators.Info.layout_locked, text="", icon='LOCKED', emboss=False)
     else:
         li.operator(KLEOperators.Info.layout_unlocked, text="", icon='UNLOCKED', emboss=False)
     lr = left.row(align=True)
-    lr.enabled = is_editable
+    lr.enabled = not is_emulation_active
     split = lr.split(factor=0.30, align=True)
     lr_target, lr_input = split.row(align=False), split.row(align=True)
-    lr_target.enabled = is_editable and prefs.allow_non_qwerty_target_layouts
+    lr_target.enabled = not is_emulation_active and prefs.allow_non_qwerty_target_layouts
     if not target_layout_mapping.is_valid():
         lr_target.alert = True
     lr_target.prop(ui_state, "current_target_layout", text="")
@@ -164,7 +164,7 @@ def draw_in_keymap_prefs(self, context):
         split = left.column(align=False).split(factor=0.98, align=False)
         left, _ = split.column(align=False), split.column(align=False)
         row = left.row(align=True)
-        row.enabled = is_editable
+        row.enabled = not is_emulation_active or prefs.preferred_target_layout == 'QWERTY'
         row.prop(prefs, "allow_non_qwerty_target_layouts")
         split = left.row().split(factor=0.35, align=False)
         left_l, left_r = split.row(align=False), split.row(align=False)
@@ -198,7 +198,7 @@ def draw_in_keymap_prefs(self, context):
 
     # Subpanel for editing the selected input keyboard layout
     if ui_state.layout_editor_visible:
-        is_layout_editable = is_editable and not is_built_in
+        is_layout_editable = not is_emulation_active and not is_built_in
         listening_key = ui_state.listening_key
 
         col.separator()
@@ -211,7 +211,7 @@ def draw_in_keymap_prefs(self, context):
         icon = 'UNLOCKED' if is_layout_editable else 'LOCKED'
         if is_built_in:
             msg = f"Use [+] above to edit a copy of this built-in layout: {layout_name}"
-        elif not is_editable:
+        elif is_emulation_active:
             msg = f"Revert emulation to edit this layout."
         elif listening_key:
             msg = f"Press the key [{listening_key}] should correspond to... (Esc/click to cancel)"

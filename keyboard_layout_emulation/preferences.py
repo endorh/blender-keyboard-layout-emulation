@@ -639,7 +639,7 @@ class KLEPreferences(AddonPreferences):
         description=(
             "Detect changes to installed add-ons and automatically reapply emulation.\n"
             "This ensures that the keyboard shortcuts of newly installed add-ons are immediately remapped.\n\n"
-            "Changes are detected by polling the set of active add-ons on a timer, but only while the 'Preferences > Add-ons' panel is being updated, so this setting should not negatively affect performance"
+            "Changes are detected by polling the set of active add-ons on a timer, but only while the 'Preferences > Add-ons' or the 'Preferences > Get Extensions' panels are updated, so this setting should not negatively affect performance"
         ),
         default=True,
         update=on_detect_addons_changes_update,
@@ -648,7 +648,7 @@ class KLEPreferences(AddonPreferences):
         name="Polling interval for detecting changes to installed add-ons",
         description=(
             "Polling interval used to detect installed add-ons.\n\n"
-            "Regardless of this setting, polling only occurs while the 'Preferences > Add-ons' panel is being updated.\n"
+            "Regardless of this setting, polling only occurs while the 'Preferences > Add-ons' or the 'Preferences > Get Extensions' panels are being updated.\n"
             "Set to 0 to poll on every draw call of the panel."
         ),
         min=0.0, soft_max=10.0, default=1.0, step=10, precision=2,
@@ -793,8 +793,8 @@ class KLEPreferences(AddonPreferences):
             k for k, v in self.custom_layouts.items() if isinstance(k, str) and isinstance(v, dict)
         ]
 
-    def is_layout_editable(self, layout_name: str, *, ignore_built_in: bool=False):
-        if not ignore_built_in and is_built_in_layout(layout_name):
+    def is_layout_editable(self, layout_name: str):
+        if is_built_in_layout(layout_name):
             return False
         if self.is_emulation_active:
             return False

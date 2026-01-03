@@ -200,7 +200,7 @@ This only happens if you have enabled emulation.
 
 The Python API does not provide a way to detect add-on installation/activation.
 What we do instead is insert draw code into the `Preferences > Add-ons` and the
-`Preferences > Get extensions` menus.
+`Preferences > Get Extensions` menus.
 This draw code does not alter the interface in any way.
 However, it allows us to get notified whenever either of these two menus are updated,
 for example, if you click any button there.

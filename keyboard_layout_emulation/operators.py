@@ -144,7 +144,7 @@ class WM_OT_kle_add_custom_layout(Operator):
         prefs.set_custom_layout(name, initial)
 
         # Select new layout if not locked
-        if prefs.is_layout_editable(current_layout, ignore_built_in=True):
+        if not prefs.is_emulation_active:
             prefs.ui_state(context).current_input_layout = name
 
         self.report({'INFO'}, f"Created custom layout '{name}'")
