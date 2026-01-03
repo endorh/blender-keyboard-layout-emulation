@@ -1,0 +1,12 @@
+INHERIT: ../base-mkdocs.yml
+site_name: Keyboard Layout Emulation - Blender Extension
+edit_uri: edit/main/docs/keyboard-layout-emulation/
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage: usage.md
+  - Preferences: preferences.md
+  - Defining your own layout: defining-your-own-keyboard-layout.md
+  - Exporting keymap presets: exporting-keymap-presets.md
+  - Technical details: technical-details.md
