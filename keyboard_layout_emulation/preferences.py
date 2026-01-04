@@ -450,14 +450,14 @@ class KLEUIStateProperties(PropertyGroup):
     Transient UI state of the KLE add-on, which needs not be saved.
     """
 
-    layout_editor_visible: BoolProperty(
-        name="Show Layout Editor",
-        description="Show keyboard layout editor",
+    show_keyboard_layout_editor: BoolProperty(
+        name="Edit Keyboard Layout",
+        description="Show the keyboard layout editor.\n\nA red button indicates that the selected layout contains conflicts.",
         default=False,
     )
-    keymaps_panel_preferences_visible: BoolProperty(
-        name="Show Keyboard Layout Emulation preferences",
-        description="Show keyboard layout emulation preferences",
+    show_keyboard_layout_emulation_preferences: BoolProperty(
+        name="Keyboard layout emulation preferences",
+        description="Show the preferences panel",
     )
 
     revert_on_uninstall: BoolProperty(
@@ -661,9 +661,10 @@ class KLEPreferences(AddonPreferences):
         min=0.0, soft_max=10.0, default=1.0, step=10, precision=2,
         subtype='TIME_ABSOLUTE', unit='TIME_ABSOLUTE',
     )
-    display_large_warning_button: BoolProperty(
-        name="Display large warning button",
-        description="Display a large warning button above the keymaps prompting to revert emulation when emulation is active",
+    show_warning_banner: BoolProperty(
+        name="Display warning banner",
+        # The description is in negative, because it is shared with the X button next to the warning
+        description="Hide the warning banner prompting to revert emulation before editing keymaps",
         default=True,
     )
     large_warning_button_height: FloatProperty(
@@ -995,7 +996,7 @@ class KLEPreferences(AddonPreferences):
                     'reapply_on_reload_delay',
                     'detect_addon_changes',
                     'detect_addon_changes_polling_interval',
-                    'display_large_warning_button',
+                    'show_warning_banner',
                     'large_warning_button_style',
                     'allow_key_conflicts_in_input_layout',
                     'logging_level',
@@ -1160,7 +1161,7 @@ class KLEPreferences(AddonPreferences):
                         "reapply_on_reload_delay",
                         "detect_addon_changes",
                         "detect_addon_changes_polling_interval",
-                        "display_large_warning_button",
+                        "show_warning_banner",
                         "large_warning_button_height",
                         "large_warning_button_style",
                         "allow_key_conflicts_in_input_layout",
@@ -1231,7 +1232,7 @@ class KLEPreferences(AddonPreferences):
                 "detect_addon_changes",
                 "detect_addon_changes_polling_interval",
                 "allow_non_qwerty_target_layouts",
-                "display_large_warning_button",
+                "show_warning_banner",
                 "large_warning_button_height",
                 "large_warning_button_style",
                 "allow_key_conflicts_in_input_layout",

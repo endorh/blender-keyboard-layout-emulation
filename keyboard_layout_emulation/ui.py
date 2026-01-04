@@ -1,5 +1,4 @@
 from __future__ import annotations
-import sys
 import time
 from typing import List, Dict
 
@@ -12,46 +11,59 @@ from .preferences import kle_prefs, KLEPreferencesUnavailableException
 from .operators import KLEOperators
 from .constants import KLELinks, kle_logger
 
-is_mac = sys.platform == 'darwin'
-
 # Layout used to render a keyboard-like button grid
+from sys import platform
 KEYBOARD_EDITOR_LAYOUT: List[List[Dict[str, object]]] = [
     # Function row
-        [{"editable": False, "label": "Esc", "w": 1.2}] +
-        [{"editable": False, "label": f"F{i}"} for i in range(1, 13)],
+        # While this row may only waste space, it helps make the keyboard
+        # editor recognizable as a keyboard
+        # In the future, we could make function keys remappable, though
+        [{"label": "Esc", "w": 1.2}] +
+        [{"label": f"F{i}"} for i in range(1, 13)],
     # Number row
         [{"ch": "`", "w": 1.0}] +
         [{"ch": c} for c in "1234567890-="] +
-        [{"editable": False, "label": "Backspace", "w": 2.0}],
+        [{"label": "Backspace", "w": 2.0}],
     # First row
-        [{"editable": False, "label": "Tab", "w": 1.5}] +
+        [{"label": "Tab", "w": 1.5}] +
         [{"ch": c} for c in "QWERTYUIOP[]"] +
         [{"ch": "\\", "w": 1.5}],
     # Second row
-        [{"editable": False, "label": "Caps", "w": 1.9}] +
+        [{"label": "Caps", "w": 1.9}] +
         [{"ch": c} for c in "ASDFGHJKL;\""] +
-        [{"editable": False, "label": "Enter", "w": 2.2}],
+        [{"label": "Enter", "w": 2.2}],
     # Third row
-        [{"editable": False, "label": "Shift", "w": 1.6}] +
+        [{"label": "Shift", "w": 1.6}] +
         [{"ch": c} for c in "<ZXCVBNM,./"] +
-        [{"editable": False, "label": "Shift", "w": 3.1}],
+        [{"label": "Shift", "w": 3.1}],
     # Modifier row
+        # While this row may only waste space, it does great work at
+        # making the keyboard editor recognizable as a keyboard
         [
-            {"editable": False, "label": "Ctrl"},
-            {"editable": False, "label": "Win"},
-            {"editable": False, "label": "Alt"},
-            {"editable": False, "label": "Space", "w": 3.6},
-            {"editable": False, "label": "Alt"},
-            {"editable": False, "label": "Menu"},
-            {"editable": False, "label": "Win"},
-            {"editable": False, "label": "Ctrl"},
-        ] if not is_mac else [
-            {"editable": False, "label": "Control"},
-            {"editable": False, "label": "Option"},
-            {"editable": False, "label": "Command"},
-            {"editable": False, "label": "Space", "w": 5.0},
-            {"editable": False, "label": "Command"},
-            {"editable": False, "label": "Option"},
+            {"label": "Control"},
+            {"label": "Option"},
+            {"label": "Command"},
+            {"label": "Space", "w": 5.0},
+            {"label": "Command"},
+            {"label": "Option"},
+        ] if platform == 'darwin' else [
+            {"label": "Ctrl"},
+            {"label": "Win"},
+            {"label": "Alt"},
+            {"label": "Space", "w": 3.6},
+            {"label": "Alt"},
+            {"label": "Menu"},
+            {"label": "Win"},
+            {"label": "Ctrl"},
+        ] if platform.startswith('win') else [
+            {"label": "Ctrl"},
+            {"label": "OS"},
+            {"label": "Alt"},
+            {"label": "Space", "w": 3.6},
+            {"label": "Alt"},
+            {"label": "Menu"},
+            {"label": "OS"},
+            {"label": "Ctrl"},
         ],
 ]
 
@@ -116,11 +128,9 @@ def draw_in_keymap_prefs(self, context):
     er = left.row(align=True)
     if not input_layout_mapping.is_valid() and not prefs.allow_key_conflicts_in_input_layout:
         er.alert = True
-    er.operator(
-        KLEOperators.toggle_edit_layout,
-        text="",
-        icon='GREASEPENCIL',
-        depress=ui_state.layout_editor_visible,
+    er.prop(
+        ui_state, "show_keyboard_layout_editor",
+        toggle=True, text="", icon='GREASEPENCIL',
     )
 
     # Right: Apply / Revert, right-aligned
@@ -143,19 +153,22 @@ def draw_in_keymap_prefs(self, context):
     rr.enabled = is_emulation_active
     # if is_emulation_active:
     #     rr.alert = True
-    rr.operator(KLEOperators.revert_layout_emulation, text="Revert", icon='LOOP_BACK')
+    rr.operator(
+        KLEOperators.revert_layout_emulation, text="Revert", icon='LOOP_BACK'
+    ).request_confirmation = False
     right.separator()
     sr = right.row(align=False)
-    sr.operator(
-        KLEOperators.toggle_keymaps_panel_preferences,
-        text="", icon='PREFERENCES', depress=ui_state.keymaps_panel_preferences_visible
+    sr.prop(
+        ui_state, "show_keyboard_layout_emulation_preferences",
+        toggle=True, text="", icon='PREFERENCES',
     )
 
-    if ui_state.keymaps_panel_preferences_visible:
+    # Add-on preferences
+    if ui_state.show_keyboard_layout_emulation_preferences:
         col.separator()
         sub = col.box()
         header = sub.row()
-        header.label(text="Keyboard Layout Emulation preferences")
+        header.label(text="Keyboard layout emulation preferences")
         header_right = header.row(align=False)
         header_right.alignment = 'RIGHT'
         header_right.operator(KLEOperators.Info.addon_info, text="More info", icon='QUESTION', emboss=False)
@@ -170,8 +183,8 @@ def draw_in_keymap_prefs(self, context):
         row.prop(prefs, "allow_non_qwerty_target_layouts")
         split = left.row().split(factor=0.35, align=False)
         left_l, left_r = split.row(align=False), split.row(align=False)
-        left_l.prop(prefs, "display_large_warning_button", text="Warning button")
-        left_r.enabled = prefs.display_large_warning_button
+        left_l.prop(prefs, "show_warning_banner", text="Warning button")
+        left_r.enabled = prefs.show_warning_banner
         split = left_r.split(factor=0.4, align=False)
         left_r_l, left_r_r = split.row(align=False), split.row(align=False)
         left_r_l.prop(prefs, "large_warning_button_height", text="Size")
@@ -199,7 +212,7 @@ def draw_in_keymap_prefs(self, context):
 
 
     # Subpanel for editing the selected input keyboard layout
-    if ui_state.layout_editor_visible:
+    if ui_state.show_keyboard_layout_editor:
         is_layout_editable = not is_emulation_active and not is_built_in
         listening_key = ui_state.listening_key
 
@@ -268,7 +281,7 @@ def draw_in_keymap_prefs(self, context):
                     # Draw single key
                     k = keys[start_idx]
                     if isinstance(k, dict):
-                        if k.get("editable", True):
+                        if 'ch' in k:
                             qw_ch = str(k.get("ch", ""))
                             if qw_ch:
                                 is_listening = ui_state.listening_key == qw_ch
@@ -322,15 +335,22 @@ def draw_in_keymap_prefs(self, context):
             right.alignment = 'RIGHT'
             right.prop(prefs, "allow_key_conflicts_in_input_layout", text="Allow conflicts")
 
-    if prefs.is_emulation_active and prefs.display_large_warning_button:
+    if prefs.is_emulation_active and prefs.show_warning_banner:
         row = ui_layout.row(align=True)
-        if prefs.large_warning_button_style == 'RED':
-            row.alert = True
         row.scale_y = prefs.large_warning_button_height
-        row.operator(
+        button_row = row.row(align=True)
+        if prefs.large_warning_button_style == 'RED':
+            button_row.alert = True
+        button_row.operator(
             KLEOperators.revert_layout_emulation,
-            text="Keyboard Layout Emulation is active. Consider disabling it before editing keymaps.",
+            text="Keyboard layout emulation is active. Consider reverting it before editing keymaps.",
             icon='ERROR', depress=prefs.large_warning_button_style == 'BLUE',
+        ).request_confirmation = True
+        row.prop(
+            prefs, 'show_warning_banner',
+            text="",
+            invert_checkbox=True,
+            icon='PANEL_CLOSE',
         )
 
 # State variables for deferred add-on list polling

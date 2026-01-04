@@ -73,24 +73,34 @@ class WM_OT_kle_revert_layout_emulation(Operator):
     bl_idname = KLEOperators.revert_layout_emulation
     bl_label = "Revert Layout Emulation"
 
+    request_confirmation: BoolProperty(
+        name="Request confirmation",
+        description="Show a confirmation dialog before reverting layout emulation",
+        default=False,
+    )
+
     @classmethod
     def description(cls, context, properties):
         prefs = kle_prefs(context)
         header = "Revert layout emulation"
-        footer = ".\n\nYou may hide the warning button in the Keyboard Layout Emulation preferences" if prefs.display_large_warning_button else ""
         if prefs.is_emulation_active:
             return header + (
                 ".\n\n"
                 "Consider reverting keyboard layout emulation before editing any keyboard shortcuts.\n"
                 "Keyboard layout emulation automatically modifies all of your keymaps, but it is not possible to correctly track your modifications during emulation to exempt them from being remapped on the next restart"
-            ) + footer
+            )
         else:
-            return header + ".\nKeyboard layout emulation is not currently applied" + footer
+            return header + ".\nKeyboard layout emulation is not currently applied"
 
     @classmethod
     def poll(cls, context):
         prefs = kle_prefs(context)
         return prefs.is_emulation_active
+
+    def invoke(self, context, event):
+        if self.request_confirmation:
+            return context.window_manager.invoke_confirm(self, event)
+        return self.execute(context)
 
     def execute(self, context):
         prefs = kle_prefs(context)
@@ -297,7 +307,7 @@ class WM_OT_kle_export_layout_json(Operator):
 
     layout: EnumProperty(
         items=layout_enum_items,
-        name="Layout",
+        name="Exported Layout",
         description="Layout to export",
         default=0,
     )
@@ -628,46 +638,6 @@ class WM_OT_kle_import_addon_preferences(Operator):
         debug_col.prop(self, "import_remapped_keymaps")
 
 # UI
-
-class WM_OT_kle_toggle_edit_layout(Operator):
-    bl_idname = KLEOperators.toggle_edit_layout
-    bl_label = "Edit Keyboard Layout"
-
-    @classmethod
-    def description(cls, context, properties):
-        prefs = kle_prefs(context)
-        ui_state = prefs.ui_state(context)
-        warning = ''
-        if not prefs.get_layout_translation(prefs.preferred_input_layout).is_valid() and not prefs.allow_key_conflicts_in_input_layout:
-            warning = ".\n\nThe selected input layout contains conflicting keys. Fix them before enabling emulation"
-        return f"{'Hide' if ui_state.layout_editor_visible else 'Display'} the keyboard layout editor{warning}"
-
-    def execute(self, context):
-        prefs = kle_prefs(context)
-        ui_state = prefs.ui_state(context)
-
-        # We don't check if the layout is editable or not
-        # It is useful to display the editor, even if locked,
-        # in case the user wants to see the current layout
-        ui_state.layout_editor_visible = not bool(ui_state.layout_editor_visible)
-        # self.report({'INFO'}, "Toggled Edit Layout panel")
-        return {'FINISHED'}
-
-
-class WM_OT_kle_toggle_keymaps_panel_preferences(Operator):
-    bl_idname = KLEOperators.toggle_keymaps_panel_preferences
-    bl_label = "Keyboard layout emulation preferences"
-    bl_description = "Show the Keyboard Layout Emulation preferences panel"
-
-    def execute(self, context):
-        prefs = kle_prefs(context)
-        ui_state = prefs.ui_state(context)
-
-        ui_state.keymaps_panel_preferences_visible = not bool(ui_state.keymaps_panel_preferences_visible)
-        # self.report({'INFO'}, "Toggled Keyboard layout emulation settings panel")
-        return {'FINISHED'}
-
-
 def _event_to_char(event) -> Optional[str]:
     # Try unicode/ascii if available
     ch = getattr(event, 'unicode', '') or getattr(event, 'ascii', '')
@@ -874,8 +844,6 @@ _registered_classes = (
     WM_OT_kle_import_layout_json,
     WM_OT_kle_export_addon_preferences,
     WM_OT_kle_import_addon_preferences,
-    WM_OT_kle_toggle_edit_layout,
-    WM_OT_kle_toggle_keymaps_panel_preferences,
     WM_OT_kle_capture_key_for_mapping,
     WM_OT_kle_debug_toggle_expanded_subkey,
     WM_OT_kle_non_editable_key,

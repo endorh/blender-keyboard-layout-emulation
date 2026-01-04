@@ -13,7 +13,7 @@ __all__ = [
 
 
 addon_id = __package__
-preferences_version = (1, 0)
+preferences_version = (1, 1)
 
 
 class KLEOperators:
@@ -27,8 +27,6 @@ class KLEOperators:
     import_layout_json = "wm.kle_import_layout_json"  # WM_OT_kle_import_layout_json
     export_addon_preferences = "wm.kle_export_addon_preferences"  # WM_OT_kle_export_addon_preferences
     import_addon_preferences = "wm.kle_import_addon_preferences"  # WM_OT_kle_import_addon_preferences
-    toggle_edit_layout = "wm.kle_toggle_edit_layout"  # WM_OT_kle_toggle_edit_layout
-    toggle_keymaps_panel_preferences = "wm.kle_toggle_keymaps_panel_preferences"  # WM_OT_kle_toggle_keymaps_panel_preferences
     capture_key_for_mapping = "wm.kle_capture_key_for_mapping"  # WM_OT_kle_capture_key_for_mapping
     debug_toggle_expanded_subkey = "wm.kle_debug_toggle_expanded_subkey"  # WM_OT_kle_debug_toggle_expanded_subkey
 
