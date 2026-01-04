@@ -49,6 +49,8 @@ Press the pencil button to reveal the keyboard layout editor.
 
 ![Keyboard layout editor](images/keyboard-layout-editor.png)
 
+> No, I do not use the Spanish Dvorak layout, it's just a convenient example.
+
 Built-in layouts cannot be edited. Instead, create a copy of them using the
 `+` button, and give it a different name before editing it.
 
