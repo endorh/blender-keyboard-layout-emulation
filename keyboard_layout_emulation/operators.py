@@ -503,7 +503,7 @@ class WM_OT_kle_export_addon_preferences(Operator):
     # Filters
     include_custom_layouts: BoolProperty(
         name="Include custom layouts",
-        description="Include all custom layouts defined in the 'Preferences > Keymaps' panel",
+        description="Include all custom layouts defined in the 'Preferences > Keymap' panel",
         default=True,
     )
     include_remapped_keymaps: BoolProperty(

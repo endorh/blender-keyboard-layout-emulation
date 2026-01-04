@@ -608,7 +608,7 @@ class KLEPreferences(AddonPreferences):
     reapply_on_keymaps_panel: BoolProperty(
         name="Reapply automatically from preferences",
         description=(
-            "Reapply emulation automatically anytime pending keymaps are detected when the 'Preferences > Keymaps' panel is updated.\n\n"
+            "Reapply emulation automatically anytime pending keymaps are detected when the 'Preferences > Keymap' panel is updated.\n\n"
             "This can be disruptive if you plan to edit the keymap while emulation is active, but it can help automatically fix some glitchy keyboard shortcuts that Blender tends to reset while you edit others (e.g., `node.duplicate_move`)"
         ),
         default=False,
@@ -616,7 +616,7 @@ class KLEPreferences(AddonPreferences):
     reapply_on_keymaps_panel_delay: FloatProperty(
         name="Delay for emulation reapply on preferences update",
         description=(
-            "Time to wait to reapply emulation from the moment pending keymaps are detected when the 'Preferences > Keymaps' panel is updated"
+            "Time to wait to reapply emulation from the moment pending keymaps are detected when the 'Preferences > Keymap' panel is updated"
         ),
         min=0.0, soft_max=30.0, default=0.5, step=100, precision=2,
         subtype='TIME_ABSOLUTE', unit='TIME_ABSOLUTE',
