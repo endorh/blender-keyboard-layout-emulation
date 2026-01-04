@@ -1,8 +1,7 @@
-## Keyboard Layout Emulation (Blender add-on)
-
-Automatically reassigns all keyboard shortcuts to emulate a QWERTY keyboard layout on a
-user-specified non-QWERTY keyboard layout, allowing users to type QWERTY keyboard shortcuts
-while typing text in their preferred keyboard layout.
+## Keyboard Layout Emulation – an extension for Blender
+This Blender extension automatically reassigns all keyboard shortcuts to emulate a QWERTY
+keyboard layout on a user-specified non-QWERTY keyboard layout, allowing users to type
+QWERTY keyboard shortcuts while typing text in their preferred keyboard layout.
 
 This allows users to benefit from the default keyboard shortcuts without changing their
 keyboard layout for typing text/using shortcuts, making use of the design effort already
