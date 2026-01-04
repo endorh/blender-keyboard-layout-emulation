@@ -72,7 +72,7 @@ restarts, the `id`s of key map items will also change.
 Also, if the user modifies a key map item, its `id` can sometimes change.
 
 > You may be wondering right now "Wait, didn't Blender use **key map item diffs**
-> to merge user modifications from the **user key config** into the **default key config**?".
+> to merge user modifications from the **user key config** into the **active key config**?".
 > 
 > How can Blender *reliably* apply these differences if the IDs are not stable?
 > The answer is **it simply doesn't**.
@@ -128,6 +128,7 @@ is not enough, by comparing their assigned input events.
 
 This is particularly troublesome in our case, because we are also modifying the assigned keys.
 What we do when refining the comparison is necessary is:
+
 - Try to match first with the remapped key.
 - If that fails, try to match with the key we remapped from, in case our remapping was undone
   during the restart or due to a glitchy shortcut.
@@ -148,8 +149,7 @@ this dictionary in the exported JSON file.
 To save space in the JSON file, the fingerprints we store only include the operator
 properties that are *truthy* (i.e., true, non-zero or non-empty).
 We only store properties that are relevant for the comparison of keyboard keymap items.
-In particular, we ignore:
-- `direction`, exclusive for drag events
+In particular, we ignore `direction`, which is exclusive for drag events.
 
 Furthermore, all modifier flags are compacted in a single string, using a similar notation
 to AutoHotKey's modifier symbols.
@@ -161,12 +161,13 @@ to denote a shortcut that accepts repeat events.
 > as *required* (`1`), *rejected* (`0`) or *ignored* (`-1`).
 > 
 > However, the UI only displays two states for each modifier, which should be interpreted
-> as `not rejected` (`≠ 0`, the button is off) and `rejected` (`= 0`, the button is on).
+> as `not rejected` (`≠ 0`, the button is on) and `rejected` (`= 0`, the button is off).
 > Users can set all keys at once to *ignored* by pressing the `Any` button, which will
 > appear to enable all modifiers at once.
 > 
 > However, after setting all keys to *ignored*, if the user disables any single one
-> and re-enables it again, its value will no longer be `ignored`, but `required`.
+> and re-enables it again, its value will no longer be `ignored`, but `required`,
+> leaving the others as *ignored*.
 > This difference is only reflected in the fact that the `Any` button will appear to be
 > disabled if not all modifiers are set to `ignored`, and the short description of the
 > key map item assignment will only include the `required` modifiers, not the `ignored` ones.
@@ -186,8 +187,13 @@ emulation whenever Blender is restarted (if emulation was enabled).
 Reapplying emulation is done by taking care to not remap any shortcut twice over, thanks
 to the **key map item** fingerprints we store during emulation.
 
-> If for some reason, this becomes problematic for you, it is possible to disable this behavior
-> in the extension's [preferences](preferences.md#reapply-emulation-on-restart).
+Since we do not have any control over the order in which addons are loaded at startup,
+we also reapply emulation a few seconds after the restart, to catch any add-ons that were
+registered after us.
+
+This delay is configurable in the extension's [preferences](preferences.md#reapply-emulation-on-restart).
+It is also possible to disable this feature altogether, if for some reason it becomes
+problematic for you.
 
 In addition to add-on shortcuts, some glitchy shortcuts (e.g., `node.duplicate_move`) are also
 unreliably editable by users, and may get reset when the user loads a new file (or even when
