@@ -1,0 +1,16 @@
+repo_url: https://github.com/endorh/blender-keyboard-layout-emulation
+site_name: Keyboard Layout Emulation
+edit_uri: edit/docs/docs/
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage: usage.md
+  - Preferences: preferences.md
+  - Defining your own layout: defining-your-own-keyboard-layout.md
+  - Exporting keymap presets: exporting-keymap-presets.md
+  - Technical details: technical-details.md
+
+theme: readthedocs
+extra_css:
+  - 'theme/dark_theme_support.css'
