@@ -1,5 +1,5 @@
 ## Keyboard Layout Emulation Preferences
-This extension exposes several preferences in the `Preferences > Keymaps` panel.
+This extension exposes several preferences in the `Preferences > Keymap` panel.
 To reveal them, press the preferences icon in the top right corner.
 
 ![Preferences](images/preferences.png)
@@ -51,7 +51,7 @@ keyboard shortcuts.
 For example, some shortcuts, such as `node.duplicate_move` are
 sometimes reset when you modify other keyboard shortcuts.
 
-When this happens, the `Apply` button in the `Preferences > Keymaps` panel
+When this happens, the `Apply` button in the `Preferences > Keymap` panel
 will be re-enabled to let you `Re-Apply` the emulation immediately.
 
 Alternatively, you may choose to automatically re-apply the emulation

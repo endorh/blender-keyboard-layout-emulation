@@ -8,7 +8,7 @@ This extension provides several built-in keyboard layouts:
 - QWERTZ (German)
 
 Usually, you select these layouts in the **input** keyboard layout dropdown
-from the top bar injected by this extension in the `Preferences > Keymaps` menu.
+from the top bar injected by this extension in the `Preferences > Keymap` menu.
 
 ![Keyboard layout emulation top bar](images/keymaps-top-bar.png)
 

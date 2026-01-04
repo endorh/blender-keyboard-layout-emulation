@@ -1,7 +1,7 @@
 ## Using Keyboard Layout Emulation
 Ensure you have [installed the extension](installation.md).
 
-Navigate to `Preferences > Keymaps`.
+Navigate to `Preferences > Keymap`.
 You should see a bar on top of the keymap preset selector with two
 keyboard layout selectors, which default to QWERTY, followed by an
 `Apply` and a `Revert` button.

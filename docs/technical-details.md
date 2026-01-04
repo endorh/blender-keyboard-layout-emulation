@@ -31,13 +31,13 @@ null to describe additions/removals.
 However, this distinction is not exposed to the Python API.
 
 Unlike what the user interface suggests, **key maps** are not arranged in any
-hierarchy. The hierarchy displayed in the `Preferences > Keymaps` menu is purely
+hierarchy. The hierarchy displayed in the `Preferences > Keymap` menu is purely
 [artificial](https://projects.blender.org/blender/blender/src/commit/df05d3baea4fd8b210243ee226cea00e14b12e6d/scripts/modules/bl_keymap_utils/keymap_hierarchy.py#L45-L247).
 Instead, key maps are arranged in **key configs**
 ([`bpy.types.KeyConfig`](https://docs.blender.org/api/current/bpy.types.KeyConfig.html)).
 
 You may be tempted to think that **key configs** simply correspond to the
-different **keymap presets** you can select in the `Preferences > Keymaps` menu
+different **keymap presets** you can select in the `Preferences > Keymap` menu
 dropdown.
 However, this is again a user interface lie.
 
@@ -45,7 +45,7 @@ In the first place, the active **key map items** used by Blender to process
 your input come from a virtual **key config**, what the Python API calls
 the **user key config**.
 This **user key config** is built by merging the **active key config**
-(the preset chosen from the `Preferences > Keymaps` menu dropdown)
+(the preset chosen from the `Preferences > Keymap` menu dropdown)
 with the **user diff key config** (not exposed to the Python API),
 and the **addons key config**, where add-ons are invited to register their
 own **key maps** and **key map items**.
@@ -54,7 +54,7 @@ All these **key configs** are managed by the **key configurations**
 
 The **user diff key config**, where changes made in the `Preferences > Keymap` menu
 are stored in, has no relation to the **keymap preset** the user selects in the
-`Preferences > Keymaps` menu dropdown.
+`Preferences > Keymap` menu dropdown.
 Instead, it is a single **key config** stored in the `userpref.blend`,
 containing **key map item diffs**.
 
