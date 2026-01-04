@@ -24,7 +24,7 @@ If you cannot find your preferred keyboard layout in the dropdown,
 you may also [define your own](defining-your-own-keyboard-layout.md).
 
 ### User Interface
-#### The **target** keyboard layout selector
+#### **Target** keyboard layout selector
 The leftmost dropdown in the top bar lets you choose a **target** keyboard layout.
 For most purposes, this should be left as QWERTY, hence why it is
 [disabled by default](preferences.md#allow-non-qwerty-target-layouts)
@@ -33,7 +33,7 @@ to avoid an easy beginner mistake.
 This should be set to the keyboard layout for which the keymap preset you are using
 was designed for, usually QWERTY.
 
-#### The **input** keyboard layout selector
+#### **Input** keyboard layout selector
 The second dropdown in the top bar lets you choose your **input** keyboard layout.
 This is where you choose your preferred keyboard layout.
 
