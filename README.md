@@ -19,5 +19,5 @@ This dropdown includes buttons to add and edit new custom keyboard layouts, as w
 as to apply/revert the emulation or edit some preferences.
 
 For further instructions on how to use this extension and other helpful information,
-you may consult the [user manual](https://endorh.github.io/blender-extensions/keyboard-layout-emulation/),
+you may consult the [user manual](https://endorh.github.io/blender-keyboard-layout-emulation/),
 or read/edit it directly in [this repository](https://github.com/endorh/blender-keyboard-layout-emulation/docs).

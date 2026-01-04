@@ -5,7 +5,7 @@ Automatically reassigns all keyboard shortcuts to emulate a QWERTY keyboard layo
 user-specified non-QWERTY keyboard layout, allowing users to type QWERTY keyboard shortcuts
 while typing text in their preferred keyboard layout.
 
-See https://endorh.github.io/blender-extensions/keyboard-layout-emulation/
+See https://endorh.github.io/blender-keyboard-layout-emulation/
 """
 
 from . import constants, preferences, operators, ui, event_handlers
