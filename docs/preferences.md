@@ -11,7 +11,7 @@ To reveal them, press the preferences icon in the top right corner.
 - [Interface settings](#interface-settings)
     - [Allow non-QWERTY target layouts](#allow-non-qwerty-target-layouts)
     - [Warning button](#warning-button)
-    - [Logging level](#logging-level)
+    - [Logging](#logging)
 - [Import preferences](#import-preferences)
 - [Uninstall options](#uninstall-options)
 
@@ -87,11 +87,11 @@ in some shortcuts being remapped a second time on the next Blender restart.
 You may hide or change the aspect of this warning button to make it easier to
 bear or harder to miss.
 
-#### Logging level
-By default, only errors and warnings are logged in Blender's System Console.
-If you are troubleshooting an issue with this extension, you may want to
-increase the logging level to see read more detailed logs when emulation is
-applied or reverted.
+#### Logging
+By default, no logging is done by the add-on.
+You may enable logging of errors, warnings or debug messages into
+Blender's System Console if you want to troubleshoot an issue
+with layout emulation.
 
 ### Import preferences
 You may export and import the preferences for this extension from the
