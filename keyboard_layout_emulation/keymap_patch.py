@@ -4,16 +4,18 @@ import bpy
 
 from .keyboard_layout import LayoutTranslation, event_type_to_char, char_to_event_type
 from .preferences import kle_prefs, keymap_id, KmiFingerprint, KmiAssignmentDiff
-from .constants import kle_logger
 
 
 def reapply_keymap_translation(translation: LayoutTranslation, context=...):
     if context is ...:
         context = bpy.context
     prefs = kle_prefs(context)
+    logger = prefs.logger
+
     if not translation.is_valid() and not prefs.allow_key_conflicts_in_input_layout:
         msg = "Layout mapping is invalid. Fix errors before applying."
-        kle_logger.warn(msg)
+        if logger:
+            logger.warning(msg)
         return False, msg
 
     remapped = prefs.remapped_keys
@@ -25,17 +27,18 @@ def reapply_keymap_translation(translation: LayoutTranslation, context=...):
             # Update existing entry instead of creating a duplicate
             diff.source_char = event_type_to_char(original_type)
             diff.target_char = event_type_to_char(new_type)
-            kle_logger.debug(f"  !! reapplied {kmi.idname}: {diff.source_char} -> {diff.target_char}")
+            if logger:
+                logger.debug(f"  !! reapplied {kmi.idname}: {diff.source_char} -> {diff.target_char}")
         else:
             kmj = remapped.setdefault(keymap_id(km), {})
             kmo = kmj.setdefault(kmi.idname, [])
             kmo.append((
-                KmiFingerprint.from_kmi(kmi),
+                KmiFingerprint.from_kmi(kmi, logger=logger),
                 KmiAssignmentDiff.from_kmi_and_types(kmi, original_type, new_type),
             ))
         remaps.append((kmi, new_type))
-        # if kle_logger.isEnabledFor(logging.DEBUG):
-        #     kle_logger.debug(
+        # if prefs.logger and prefs.logger.isEnabledFor(logging.DEBUG):
+        #     prefs.logger.debug(
         #         f"  !! Serialized: {kmi.idname}, keys: {operator_properties_to_dict(kmi.properties).keys()}\n"
         #         f"    " + json.dumps(operator_properties_to_dict(kmi.properties), indent=2).replace('\n', '\n    ')
         #     )
@@ -47,11 +50,13 @@ def reapply_keymap_translation(translation: LayoutTranslation, context=...):
         for kmi, new_type in remaps:
             kmi.type = new_type
         msg = f"Remapped correctly {len(remaps)} keymap items!"
-        kle_logger.info(msg)
+        if logger:
+            logger.info(msg)
         return True, msg
     except Exception as e:
         msg = f"Failed to remap keymap items: {e}"
-        kle_logger.warn(msg)
+        if logger:
+            logger.warning(msg)
         return False, msg
 
 
@@ -71,6 +76,7 @@ def revert_keymap_translation(context=...):
     if context is ...:
         context = bpy.context
     prefs = kle_prefs(context)
+    logger = prefs.logger
 
     remapped = prefs.remapped_keys
     all_items = freeze_map([
@@ -90,24 +96,26 @@ def revert_keymap_translation(context=...):
     processed_items_set = set(freeze_map(processed_items))
     unprocessed_items = [item for item in all_items if item not in processed_items_set]
 
-    if kle_logger.isEnabledFor(logging.DEBUG):
+    if logger and logger.isEnabledFor(logging.DEBUG):
         # for km_id, op_idname, fingerprint, diff in all_items:
-        #     kle_logger.debug(f"  ! {km_id} > {op_idname} > {fingerprint} > {diff}")
+        #     prefs.loggerlogger.debug(f"  ! {km_id} > {op_idname} > {fingerprint} > {diff}")
         # for km_id, op_idname, fingerprint, diff in processed_items:
-        #     kle_logger.debug(f"  ! proc: {km_id} > {op_idname} > {fingerprint} > {diff}")
+        #     prefs.logger.debug(f"  ! proc: {km_id} > {op_idname} > {fingerprint} > {diff}")
         for km_id, op_idname, fingerprint, diff in unprocessed_items:
-            kle_logger.debug(f"  ! not found: {km_id} > {op_idname} > {fingerprint} > {diff}")
-        kle_logger.debug(f"  ! all_items ({len(all_items)})")
-        kle_logger.debug(f"  ! processed_items ({len(processed_items)})")
-        kle_logger.debug(f"  ! unprocessed_items ({len(unprocessed_items)})")
+            logger.debug(f"  ! not found: {km_id} > {op_idname} > {fingerprint} > {diff}")
+        logger.debug(f"  ! all_items ({len(all_items)})")
+        logger.debug(f"  ! processed_items ({len(processed_items)})")
+        logger.debug(f"  ! unprocessed_items ({len(unprocessed_items)})")
 
     prefs.remapped_keys = None
 
     if not unprocessed_items:
         msg = f"Reverted correctly {len(processed_items)} items from keyboard layout emulation!"
-        kle_logger.info(msg)
+        if logger:
+            logger.info(msg)
         return True, msg
     else:
         msg = f"Could not find & revert {len(unprocessed_items)}/{len(all_items)} items (see console)! (reverted {len(processed_items)} items successfully). Consider restoring a keymap preset or manually revising your keymap."
-        kle_logger.warn(msg)
+        if logger:
+            logger.warning(msg)
         return False, msg

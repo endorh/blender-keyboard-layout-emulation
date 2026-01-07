@@ -9,7 +9,7 @@ from bpy.types import AddonPreferences, Operator, Panel, PropertyGroup
 from .keyboard_layout import is_built_in_layout
 from .preferences import kle_prefs, KLEPreferencesUnavailableException
 from .operators import KLEOperators
-from .constants import KLELinks, kle_logger
+from .constants import KLELinks
 
 # Layout used to render a keyboard-like button grid
 from sys import platform
@@ -191,7 +191,8 @@ def draw_in_keymap_prefs(self, context):
         left_r_r.prop(prefs, "large_warning_button_style", expand=True)
         split = left.row(align=True).split(factor=0.35, align=False)
         left_l, left_r = split.row(align=True), split.row(align=True)
-        left_l.label(text="Logging level")
+        left_l.prop(prefs, "logging_enabled", text="Logging")
+        left_r.enabled = prefs.logging_enabled
         left_r.prop(prefs, "logging_level", expand=True)
 
         split = right.row().split(factor=0.65, align=True)
@@ -381,10 +382,13 @@ def on_addon_menu_draw_call(context):
     global _addon_check_scheduled, _last_addons_prefs_draw_time, _last_addons_prefs_poll_time
 
     prefs = kle_prefs(context)
+    logger = prefs.logger
+
     if not prefs.detect_addon_changes or not prefs.is_emulation_active:
         return
 
-    # kle_logger.debug(f"... add-ons prefs draw call")
+    # if logger:
+    #     logger.debug(f"... add-ons prefs draw call")
 
     poll_interval = prefs.detect_addon_changes_polling_interval
     if poll_interval <= 0:
@@ -399,20 +403,26 @@ def on_addon_menu_draw_call(context):
 def scheduled_addon_changes_poll():
     global _addon_check_scheduled, _last_addons_prefs_draw_time, _last_addons_prefs_poll_time
     try:
-        # kle_logger.debug(f"... scheduled poll: {_last_addons_prefs_poll_time} [{_last_addons_prefs_draw_time}]")
+        # logger = kle_logger()
+        # if logger:
+        #    logger.debug(f"... scheduled poll: {_last_addons_prefs_poll_time} [{_last_addons_prefs_draw_time}]")
         if _last_addons_prefs_poll_time < _last_addons_prefs_draw_time:
             prefs = kle_prefs()
             # Re-register timer
             bpy.app.timers.register(scheduled_addon_changes_poll, first_interval=prefs.detect_addon_changes_polling_interval)
             _last_addons_prefs_poll_time = time.time()
-            # kle_logger.debug(f"    re-registered")
+            # if logger:
+            #     logger.debug(f"    re-registered")
         else:
             _addon_check_scheduled = False
-            # kle_logger.debug(f"    last")
+            # if logger:
+            #     logger.debug(f"    last")
         addon_changes_poll()
     except KLEPreferencesUnavailableException:
         # Handler triggered after add-on was uninstalled, skip
-        kle_logger.debug("! Skipped add-on changes poll, add-on preferences unavailable. Add-on was likely disabled/uninstalled.")
+        # # kle_logger().debug("! Skipped add-on changes poll, add-on preferences unavailable. Add-on was likely disabled/uninstalled.")
+        # If the preferences are not available, the logger is neither
+        # print("! Skipped add-on changes poll, add-on preferences unavailable. Add-on was likely disabled/uninstalled.")
         return
 
 def get_current_set_of_addons(context=...) -> set[str]:
@@ -423,19 +433,24 @@ def get_current_set_of_addons(context=...) -> set[str]:
 def addon_changes_poll():
     global _last_active_addons_set
     current_addons = get_current_set_of_addons()
-    # kle_logger.debug(f"... ! poll")
+    # logger = kle_logger()
+    # if logger:
+    #     logger.debug(f"... ! poll")
 
     # This should only occur on the first poll
     if not _last_active_addons_set:
         _last_active_addons_set = current_addons
-        # kle_logger.debug(f"    first poll, skipped")
+        # if logger:
+        #     logger.debug(f"    first poll, skipped")
     elif _last_active_addons_set != current_addons:
         _last_active_addons_set = current_addons
-        # kle_logger.debug(f"    active addons changed, re-running event handlers")
+        # if logger:
+        #     logger.debug(f"    active addons changed, re-running event handlers")
         from .event_handlers import on_addons_set_change
         on_addons_set_change()
     else:
-        # kle_logger.debug(f"    no change")
+        # if logger:
+        #     logger.debug(f"    no change")
         pass
 
 
@@ -455,12 +470,16 @@ def on_detect_addons_changes_update(context=...):
 def append_addons_menu_draw_hooks():
     bpy.types.USERPREF_PT_addons.prepend(draw_in_addons_prefs)
     bpy.types.USERPREF_PT_extensions.prepend(draw_in_extensions_prefs)
-    # kle_logger.debug(f"! Installed addons draw hook")
+    # logger = kle_logger()
+    # if logger:
+    #     logger.debug(f"! Installed addons draw hook")
 
 def remove_addons_menu_draw_hooks():
     bpy.types.USERPREF_PT_addons.remove(draw_in_addons_prefs)
     bpy.types.USERPREF_PT_extensions.remove(draw_in_extensions_prefs)
-    # kle_logger.debug(f"! Removed addons draw hook")
+    # logger = kle_logger()
+    # if logger:
+    #     logger.debug(f"! Removed addons draw hook")
 
 
 def register():

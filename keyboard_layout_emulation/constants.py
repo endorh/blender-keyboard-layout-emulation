@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-import logging
-
 
 __all__ = [
     'addon_id',
     'preferences_version',
     'KLEOperators',
     'KLELinks',
-    'kle_logger',
 ]
 
 
@@ -41,12 +38,3 @@ class KLEOperators:
 class KLELinks:
     source = "https://github.com/endorh/blender-keyboard-layout-emulation/"
     help = "https://endorh.github.io/blender-keyboard-layout-emulation/"
-
-
-_kle_logger_formatter = logging.Formatter('%(asctime)s [Keyboard Layout Emulation] %(message)s')
-_kle_logger_handler = logging.StreamHandler()
-_kle_logger_handler.setFormatter(_kle_logger_formatter)
-
-kle_logger = logging.getLogger(__package__)
-kle_logger.setLevel(logging.INFO)
-kle_logger.addHandler(_kle_logger_handler)

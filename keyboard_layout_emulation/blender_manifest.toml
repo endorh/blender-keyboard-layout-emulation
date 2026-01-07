@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "keyboard_layout_emulation"
-version = "1.0.1"
+version = "1.0.2"
 name = "Keyboard Layout Emulation"
 tagline = "Emulate QWERTY keyboard shortcuts on non-QWERTY keyboard layouts"
 maintainer = "Endor H"

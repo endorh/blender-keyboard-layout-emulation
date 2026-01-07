@@ -5,7 +5,6 @@ from bpy.app.handlers import persistent
 
 from .keymap_patch import reapply_keymap_translation, revert_keymap_translation
 from .preferences import kle_prefs
-from .constants import kle_logger
 
 def maybe_reapply_translation_deferred(context=..., *, for_reload=True):
     prefs = kle_prefs(context)
@@ -31,10 +30,12 @@ def maybe_reapply_translation(context=..., *, for_reload=True):
     translation = prefs.get_preferred_layout_translation()
 
     success, msg = reapply_keymap_translation(translation, context)
-    if not success:
-        kle_logger.warn(f"Failed to apply layout emulation on reload:\n  {msg}")
-    else:
-        kle_logger.info(f"Applied layout emulation on reload:\n  {msg}")
+    logger = prefs.logger
+    if logger:
+        if not success:
+            logger.warning(f"Failed to apply layout emulation on reload:\n  {msg}")
+        else:
+            logger.info(f"Applied layout emulation on reload:\n  {msg}")
 
 
 def maybe_revert_translation_on_uninstall(context=...):
@@ -46,10 +47,12 @@ def maybe_revert_translation_on_uninstall(context=...):
         return
 
     success, msg = revert_keymap_translation(context)
-    if not success:
-        kle_logger.warn(f"Failed to revert layout emulation on unload:\n  {msg}")
-    else:
-        kle_logger.info(f"Reverted keyboard layout emulation on unload:\n  {msg}")
+    logger = prefs.logger
+    if logger:
+        if not success:
+            logger.warning(f"Failed to revert layout emulation on unload:\n  {msg}")
+        else:
+            logger.info(f"Reverted keyboard layout emulation on unload:\n  {msg}")
 
 
 def on_addons_set_change():

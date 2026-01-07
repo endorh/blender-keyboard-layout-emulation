@@ -28,6 +28,7 @@ __all__ = [
     'KLEPreferencesUnavailableException',
     # Accessors
     'kle_prefs',
+    'kle_logger',
     'get_current_keyconfig_set',
     'resolve_remapped_keymap_item',
     'is_remappable_keymap_item',
@@ -140,6 +141,9 @@ def kle_prefs(context=...) -> KLEPreferences:
     except KeyError as e:
         raise KLEPreferencesUnavailableException()
 
+def kle_logger(context=...) -> Optional[logging.Logger]:
+    return kle_prefs(context).logger
+
 class KLEPreferencesUnavailableException(Exception):
     pass
 
@@ -180,7 +184,9 @@ def operator_property_value_to_dict(value) -> Any:
     elif hasattr(value, '__len__'):
         return [operator_property_value_to_dict(v) for v in value]
     else:
-        kle_logger.warn(f"  ! unsupported prop type: {type(value)}")
+        logger = kle_logger()
+        if logger:
+            logger.warning(f"  ! unsupported prop type: {type(value)}")
         # We only record the existence of properties when we can serialize them safely into JSON.
         # Nonetheless, the code above handles all the cases that Blender's keymap export feature does.
         #    See: blender/blender/scripts/modules/bl_keymap_utils/io.py#_kmi_properties_to_lines_recursive#string_value
@@ -221,15 +227,15 @@ class KmiFingerprint:
     active: bool
 
     @classmethod
-    def from_kmi(cls, kmi) -> KmiFingerprint:
+    def from_kmi(cls, kmi, *, logger=None) -> KmiFingerprint:
         stored_props = None
         properties = getattr(kmi, 'properties', None)
         if properties is not None:
             props = operator_properties_to_dict(properties)
             stored_props = compact_operator_properties(props)
             if stored_props:
-                if kle_logger.isEnabledFor(logging.DEBUG) and stored_props != dict(stored_props):
-                    kle_logger.debug(f"  ! non-self-comparable properties: {kmi.idname} " + json_encode_dumps(stored_props, indent=2).replace('\n', '\n    '))
+                if logger and logger.isEnabledFor(logging.DEBUG) and stored_props != dict(stored_props):
+                    logger.debug(f"  ! non-self-comparable properties: {kmi.idname} " + json_encode_dumps(stored_props, indent=2).replace('\n', '\n    '))
             else:
                 stored_props = None
         propvalue = getattr(kmi, 'propvalue', 'NONE')
@@ -322,23 +328,25 @@ class KmiAssignmentDiff:
         return s
 
 
-def resolve_remapped_keymap_item(kmi, per_op_kmi) -> Optional[Tuple[KmiFingerprint, KmiAssignmentDiff]]:
-    test_fingerprint = KmiFingerprint.from_kmi(kmi)
+def resolve_remapped_keymap_item(kmi, per_op_kmi, *, logger=None) -> Optional[Tuple[KmiFingerprint, KmiAssignmentDiff]]:
+    test_fingerprint = KmiFingerprint.from_kmi(kmi, logger=logger)
     compatible = [t for t in per_op_kmi if test_fingerprint == t[0]]
     if len(compatible) == 1:
         # Single candidate, resolve to it
         return compatible[0]
     elif not compatible:
-        kle_logger.debug(
-            f"  ! no compatible fingerprint found!! ({kmi.idname})\n" +
-            f"    test: {test_fingerprint}" + json_encode_dumps(KmiFingerprint.encode_json(test_fingerprint), indent=2).replace('\n', '\n    ') + '\n' +
-            f"    candidates: " + json_encode_dumps([
-                [KmiFingerprint.encode_json(fingerprint), KmiAssignmentDiff.encode_json(diff)]
-                for fingerprint, diff in per_op_kmi
-            ], indent=2).replace('\n', '\n   ')
-        )
+        if logger:
+            logger.debug(
+                f"  ! no compatible fingerprint found!! ({kmi.idname})\n" +
+                f"    test: {test_fingerprint}" + json_encode_dumps(KmiFingerprint.encode_json(test_fingerprint), indent=2).replace('\n', '\n    ') + '\n' +
+                f"    candidates: " + json_encode_dumps([
+                    [KmiFingerprint.encode_json(fingerprint), KmiAssignmentDiff.encode_json(diff)]
+                    for fingerprint, diff in per_op_kmi
+                ], indent=2).replace('\n', '\n   ')
+            )
         return None
-    # kle_logger.debug(f"  > more than one compatible fingerprint")
+    # if logger:
+    #     logger.debug(f"  > more than one compatible fingerprint")
 
     kmi_char = event_type_to_char(kmi.type)
 
@@ -367,7 +375,8 @@ def resolve_remapped_keymap_item(kmi, per_op_kmi) -> Optional[Tuple[KmiFingerpri
         return compatible_before[0]
 
     if len(compatible_after) > 1 or len(compatible_before) > 1:
-        kle_logger.debug(f"  ! multiple remapped keymap items found for operator '{kmi.idname}': {compatible_after or compatible_before}")
+        if logger:
+            logger.debug(f"  ! multiple remapped keymap items found for operator '{kmi.idname}': {compatible_after or compatible_before}")
         # return compatible_after[0] if compatible_after else compatible_before[0]
     return None
 
@@ -430,14 +439,27 @@ def on_detect_addons_changes_update(self, context):
     from .ui import on_detect_addons_changes_update as ui_handler
     ui_handler(context)
 
+def on_logging_enabled_update(self=..., context=...):
+    prefs = kle_prefs(context)
+    if prefs.logging_enabled:
+        logger = logging.getLogger(__package__)
+        logger.setLevel(prefs.logging_level)
+        if not logger.hasHandlers():
+            _logger_formatter = logging.Formatter('%(asctime)s [Keyboard Layout Emulation] %(message)s')
+            _logger_handler = logging.StreamHandler()
+            _logger_handler.setFormatter(_logger_formatter)
+            logger.addHandler(_logger_handler)
+
 def on_logging_level_update(self=..., context=...):
     prefs = kle_prefs(context)
-    kle_logger.setLevel(
-        logging.DEBUG if prefs.logging_level == 'DEBUG' else
-        logging.INFO if prefs.logging_level == 'INFO' else
-        logging.WARN if prefs.logging_level == 'WARN' else
-        logging.ERROR
-    )
+    logger = prefs.logger
+    if logger:
+        logger.setLevel(
+            logging.DEBUG if prefs.logging_level == 'DEBUG' else
+            logging.INFO if prefs.logging_level == 'INFO' else
+            logging.WARNING if prefs.logging_level == 'WARN' else
+            logging.ERROR
+        )
 
 
 # Compound property helpers
@@ -690,6 +712,12 @@ class KLEPreferences(AddonPreferences):
             "Some keyboard layouts may be impossible to express in Blender without key conflicts due to the limited character range supported by Blender's keymap system."
         ),
     )
+    logging_enabled: BoolProperty(
+        name="Log messages",
+        description="Log errors, warning or debug information to the Blender's System Console",
+        default=False,
+        update=on_logging_enabled_update,
+    )
     logging_level: EnumProperty(
         items=[
             ('ERROR', "Error", "Log only errors"),
@@ -702,6 +730,12 @@ class KLEPreferences(AddonPreferences):
         default='WARN',
         update=on_logging_level_update,
     )
+
+    @property
+    def logger(self) -> Optional[logging.Logger]:
+        if self.logging_enabled:
+            return logging.getLogger(__package__)
+        return None
 
     is_emulation_active: BoolProperty(
         name="Emulation active",
@@ -833,6 +867,8 @@ class KLEPreferences(AddonPreferences):
     def remapped_keymap_items(self, context=...) -> Iterator[Tuple[KeyMap, KeyMapItem, KmiFingerprint, KmiAssignmentDiff]]:
         if context is ...:
             context = bpy.context
+        logger = kle_logger(context)
+
         remapped_keymaps = self.remapped_keys
         if not remapped_keymaps:
             return
@@ -851,29 +887,33 @@ class KLEPreferences(AddonPreferences):
                 if not op in remapped_km:
                     continue
                 remapped_op = remapped_km[op]
-                rs = resolve_remapped_keymap_item(kmi, remapped_op)
+                rs = resolve_remapped_keymap_item(kmi, remapped_op, logger=logger)
                 if rs is not None:
                     yield km, kmi, rs[0], rs[1]
                 else:
-                    kle_logger.debug(
-                        f"  ! unresolved kmi: {kmi.idname} ({kmi.name}) -> {kmi_modifier_string(kmi)} & {kmi.type}\n" +
-                        f"    fingerprint: " + json_encode_dumps(KmiFingerprint.encode_json(KmiFingerprint.from_kmi(kmi)), indent=2).replace('\n', '\n    ') + '\n' +
-                        f"    candidates: " + json_encode_dumps([
-                            [KmiFingerprint.encode_json(fingerprint), KmiAssignmentDiff.encode_json(diff)]
-                            for fingerprint, diff in remapped_op
-                        ], indent=2).replace('\n', '\n    ')
-                    )
+                    if logger:
+                        logger.debug(
+                            f"  ! unresolved kmi: {kmi.idname} ({kmi.name}) -> {kmi_modifier_string(kmi)} & {kmi.type}\n" +
+                            f"    fingerprint: " + json_encode_dumps(KmiFingerprint.encode_json(KmiFingerprint.from_kmi(kmi, logger=logger)), indent=2).replace('\n', '\n    ') + '\n' +
+                            f"    candidates: " + json_encode_dumps([
+                                [KmiFingerprint.encode_json(fingerprint), KmiAssignmentDiff.encode_json(diff)]
+                                for fingerprint, diff in remapped_op
+                            ], indent=2).replace('\n', '\n    ')
+                        )
 
     def pending_keymaps_to_emulate(self, context=...) -> Iterator[Tuple[KeyMap, KeyMapItem, Optional[KmiFingerprint], Optional[KmiAssignmentDiff]]]:
         if context is ...:
             context = bpy.context
+        logger = kle_logger(context)
+
         remapped_keymaps = self.remapped_keys
         if not remapped_keymaps:
             remapped_keymaps = {}
         kcs = get_current_keyconfig_set(context)
         # user_keymap_names = {km.name for km in kcs.user.keymaps}
 
-        # kle_logger.debug(f"Potential keymaps ({len(kcs.user.keymaps)}): {[keymap_id(km) for km in kcs.user.keymaps]}")
+        # if logger:
+        #     logger.debug(f"Potential keymaps ({len(kcs.user.keymaps)}): {[keymap_id(km) for km in kcs.user.keymaps]}")
         layout_translation = self.get_preferred_layout_translation()
         for km in kcs.user.keymaps:
             km_id = keymap_id(km)
@@ -881,8 +921,8 @@ class KLEPreferences(AddonPreferences):
                 for kmi in km.keymap_items:
                     if is_remappable_keymap_item(kmi, layout_translation):
                         # # This seems to be the case for `node.duplicate_move_linked` & friends, for some reason
-                        # if kmi.idname == 'node.duplicate_move_linked':
-                        #     kle_logger.debug(
+                        # if logger and kmi.idname == 'node.duplicate_move_linked':
+                        #     logger.debug(
                         #         f"  !! unresolved duplicate kmi km: {km_id} {kmi.idname} ({kmi.name}) -> {kmi_modifier_string(kmi)} & {kmi.type}\n" +
                         #         f"     props: " + json_set_dumps(compact_operator_properties(operator_properties_to_dict(kmi.properties)), indent=2).replace('\n', '\n    ') + '\n' +
                         #         f"     candidates: " + ', '.join(remapped_keymaps.keys())
@@ -895,22 +935,22 @@ class KLEPreferences(AddonPreferences):
                         continue
                     op = kmi.idname
                     if not op in remapped_km:
-                        # if kmi.idname == 'node.duplicate_move_linked':
-                        #     kle_logger.debug(
+                        # if logger and kmi.idname == 'node.duplicate_move_linked':
+                        #     logger.debug(
                         #         f"  !! unresolved duplicate kmi op: {kmi.idname} ({kmi.name}) -> {kmi_modifier_string(kmi)} & {kmi.type}\n" +
                         #         # f"     props: " + json_set_dumps(compact_operator_properties(operator_properties_to_dict(kmi.properties)), indent=2).replace('\n', '\n    ') + '\n' +
                         #         f"     candidates: " + ', '.join(remapped_km.keys())
                         #     )
                         yield km, kmi, None, None
                         continue
-                    rs = resolve_remapped_keymap_item(kmi, remapped_km[op])
+                    rs = resolve_remapped_keymap_item(kmi, remapped_km[op], logger=logger)
                     if rs is None:
                         yield km, kmi, None, None
                     else:
                         fingerprint, diff = rs
                         if event_type_to_char(kmi.type) == diff.source_char:
-                            # if kmi.idname == 'node.duplicate_move_linked':
-                            #     kle_logger.debug(
+                            # if logger and kmi.idname == 'node.duplicate_move_linked':
+                            #     logger.debug(
                             #         f"  !! unresolved duplicate kmi: {rs}, ({kmi.type})\n" +
                             #         f"     props: " + json_set_dumps(compact_operator_properties(operator_properties_to_dict(kmi.properties)), indent=2).replace('\n', '\n    ') + '\n' +
                             #         f"     candidates: " + json_set_dumps(remapped_km[op], indent=2).replace('\n', '\n    ')
@@ -1165,6 +1205,7 @@ class KLEPreferences(AddonPreferences):
                         "large_warning_button_height",
                         "large_warning_button_style",
                         "allow_key_conflicts_in_input_layout",
+                        "logging_enabled",
                         "logging_level",
                         "is_emulation_active",
                         ("custom_layouts", include_custom_layouts),
@@ -1236,6 +1277,7 @@ class KLEPreferences(AddonPreferences):
                 "large_warning_button_height",
                 "large_warning_button_style",
                 "allow_key_conflicts_in_input_layout",
+                "logging_enabled",
                 "logging_level",
             ]:
                 setattr(self, imported_pref, p.get(imported_pref, getattr(self, imported_pref)))
@@ -1280,7 +1322,7 @@ def init_ui_state():
     ui_state.current_input_layout = prefs.preferred_input_layout
     ui_state.current_target_layout = prefs.preferred_target_layout
 
-    on_logging_level_update()
+    on_logging_enabled_update()
 
 
 def register():
