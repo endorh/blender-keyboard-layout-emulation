@@ -58,12 +58,14 @@ Press the pencil button to reveal the keyboard layout editor.
 In the keyboard layout editor, press any key and subsequently type the key
 it should correspond to on your layout to reassign it.
 Press `Escape` or click anywhere to cancel reassigning a key.
-Changes are immediately saved in your layout.
+Changes are immediately saved in the selected layout.
 
 !!! tip
     You may also use the `Import layout...` and `Export layout...` buttons to
     import or export keyboard layouts as simple JSON files containing a mapping
     of characters.
+
+!!! info "See more on [defining your own keyboard layout](defining-your-own-keyboard-layout.md)"
 
 ### Applying and Reverting keyboard layout emulation
 The `Apply` button enables keyboard layout emulation.

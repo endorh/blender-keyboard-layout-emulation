@@ -1,12 +1,12 @@
 # Installing Keyboard Layout Emulation
 
 ???+ abstract "Quick links"
-    [:simple-blender: Blender Extensions](https://extensions.blender.org/add-ons/keyboard-layout-emulation/){ .md-button }
-    [:simple-github: GitHub Releases](https://github.com/endorh/blender-keyboard-layout-emulation/releases){ .md-button }
+    [:simple-blender: Blender Extensions](https://extensions.blender.org/add-ons/keyboard-layout-emulation/){ .md-button .no-text-select }
+    [:simple-github: GitHub Releases](https://github.com/endorh/blender-keyboard-layout-emulation/releases){ .md-button .no-text-select }
     [:material-drag-variant: Drag onto Blender](https://extensions.blender.org/download/sha256:16913e50665a8e293b248d82aec64859f67c4c0932a3ef41b765cbcb603b2e04/add-on-keyboard-layout-emulation-v1.0.2.zip?repository=%2Fapi%2Fv1%2Fextensions%2F&blender_version_min=4.2.0){ .md-button .md-button--primary .no-text-select }
 
 ## Installing from...
-=== ":simple-blender: The Blender Extensions website"
+=== ":simple-blender: Blender Extensions website"
     1. Visit the [add-on's page](https://extensions.blender.org/add-ons/keyboard-layout-emulation/) in the official website.
     2. Scroll down and click the `Get Add-on` button on the bottom of the right sidebar.
     3. Drag the handle revealed under the button into an open Blender window.
