@@ -31,11 +31,15 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install mkdocs
+          pip install "mkdocs-material[imaging]" mkdocs-plugin-minify
+          
+          apt-get install -y pngquant
 
       - name: Build docs via script
         run: |
           python -m mkdocs build -c -s -f mkdocs.yml -d build/gh-pages
+        env:
+          CI: true
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4.0.0

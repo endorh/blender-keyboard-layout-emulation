@@ -1,0 +1,22 @@
+/* Admonition style */
+.md-typeset .admonition,
+.md-typeset details {
+    border-width: 1px;
+    border-left-width: 5px;
+}
+
+/* Image round corners */
+img {
+    border-radius: 4px;
+}
+
+/* Compact lists */
+.md-typeset ol li, .md-typeset ul li {
+    margin-bottom: 0.1rem;
+}
+
+.md-typeset ol li ol, .md-typeset ol li ul,
+.md-typeset ul li ol, .md-typeset ul li ul {
+    margin-top: 0.1rem;
+    margin-bottom: 0.2rem;
+}

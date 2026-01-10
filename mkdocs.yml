@@ -3,7 +3,7 @@ site_name: Keyboard Layout Emulation
 edit_uri: edit/docs/docs/
 
 nav:
-  - Home: index.md
+  - About: index.md
   - Installation: installation.md
   - Usage: usage.md
   - Preferences: preferences.md
@@ -11,6 +11,68 @@ nav:
   - Exporting keymap presets: exporting-keymap-presets.md
   - Technical details: technical-details.md
 
-theme: readthedocs
+plugins:
+  - meta
+  - search
+  - tags
+  - group:
+      enabled: !ENV CI
+      plugins:
+      - optimize
+      - minify
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    # - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.instant.preview
+    - navigation.tracking
+    - navigation.top
+    - navigation.footer
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.action.edit
+  palette:
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: black
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+  logo: images/icon.png
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - def_list
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
 extra_css:
-  - 'theme/dark_theme_support.css'
+  - theme/style.css

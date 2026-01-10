@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 ## Keyboard Layout Emulation – an extension for Blender
 This Blender extension can remap your keyboard shortcuts to emulate QWERTY
 keyboard shortcuts on non-QWERTY keyboard layouts, as if Blender handled
