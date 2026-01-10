@@ -20,3 +20,7 @@ img {
     margin-top: 0.1rem;
     margin-bottom: 0.2rem;
 }
+
+.no-text-select {
+    user-select: none;
+}

@@ -1,20 +1,18 @@
 # Installing Keyboard Layout Emulation
 
 ???+ abstract "Quick links"
-    Find this add-on in:
-    
-    [Blender Extensions](https://extensions.blender.org/add-ons/keyboard-layout-emulation/){ .md-button }
-    [GitHub Releases](https://github.com/endorh/blender-keyboard-layout-emulation/releases){ .md-button }
-    [Drag this onto Blender](https://extensions.blender.org/download/sha256:16913e50665a8e293b248d82aec64859f67c4c0932a3ef41b765cbcb603b2e04/add-on-keyboard-layout-emulation-v1.0.2.zip?repository=%2Fapi%2Fv1%2Fextensions%2F&blender_version_min=4.2.0){ .md-button .md-button--primary }
+    [:simple-blender: Blender Extensions](https://extensions.blender.org/add-ons/keyboard-layout-emulation/){ .md-button }
+    [:simple-github: GitHub Releases](https://github.com/endorh/blender-keyboard-layout-emulation/releases){ .md-button }
+    [:material-drag-variant: Drag onto Blender](https://extensions.blender.org/download/sha256:16913e50665a8e293b248d82aec64859f67c4c0932a3ef41b765cbcb603b2e04/add-on-keyboard-layout-emulation-v1.0.2.zip?repository=%2Fapi%2Fv1%2Fextensions%2F&blender_version_min=4.2.0){ .md-button .md-button--primary .no-text-select }
 
 ## Installing from...
-=== "The Blender Extensions website"
+=== ":simple-blender: The Blender Extensions website"
     1. Visit the [add-on's page](https://extensions.blender.org/add-ons/keyboard-layout-emulation/) in the official website.
     2. Scroll down and click the `Get Add-on` button on the bottom of the right sidebar.
     3. Drag the handle revealed under the button into an open Blender window.
     4. Confirm the installation.
 
-=== "Blender Preferences"
+=== ":simple-blender: Blender Preferences"
     1. Navigate to `Preferences > Get Extensions`:
         1. Open Blender preferences (`Edit > Preferences...` or `Ctrl + ,`)
         2. Select the `Get Extensions` tab on the left column.
@@ -23,7 +21,7 @@
         1. If the extension entry appears in the *Installed* list, you're done.
         2. Otherwise, look for it in the *Available* list.
 
-=== "GitHub"
+=== ":simple-github: GitHub"
     1. Download the latest `add-on-keyboard-layout-emulation-v*.*.*.zip` from
        [GitHub](https://github.com/endorh/blender-keyboard-layout-emulation/releases)
     2. In Blender, navigate to `Preferences > Get Extensions`

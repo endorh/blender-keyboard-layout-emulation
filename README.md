@@ -20,7 +20,7 @@ in a way that is convenient for one-hand typing and with good mnemonics in the
 corresponding layout is not a task everyone can afford.
 
 ### Building the manual
-The docs in this branch are built using [mkdocs](https://www.mkdocs.org).
+The docs in this branch are built using [Material for MkDocs](https://squidfunk.github.io/mkdocs-material/).
 
 To build them locally:
 1. Install `mkdocs`: `pip install mkdocs`
@@ -32,3 +32,8 @@ The docs are built automatically on every push to the `docs` branch, and deploye
 This is achieved by the
 [build-docs](https://github.com/endorh/blender-keyboard-layout-emulation/edit/docs/.github/workflows/build-docs.yml)
 workflow.
+
+### Release process
+When a new version is released, the quick link in the
+[docs/installation.md](docs/installation.md)
+file has to be updated to point to the new release.
