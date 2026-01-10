@@ -33,7 +33,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install "mkdocs-material[imaging]" mkdocs-minify-plugin
           
-          apt-get install -y pngquant
+          sudo apt install -y pngquant
 
       - name: Build docs via script
         run: |
