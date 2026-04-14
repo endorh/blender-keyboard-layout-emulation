@@ -50,3 +50,11 @@ You can edit the add-on's preferences by clicking the gear icon on the top right
 
 See the [user manual](https://endorh.github.io/blender-keyboard-layout-emulation/)
 for more information.
+
+## Building the extension
+To build the extension from source:
+1. Ensure you have [Python](https://www.python.org/downloads/) installed
+2. Ensure you have [Blender](https://www.blender.org) installed
+3. Ensure `blender.exe` is in your system's PATH
+4. Run `python build_extensions.py` in this directory
+5. The extension should appear as a `.zip` file in the `build` directory
