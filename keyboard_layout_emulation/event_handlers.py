@@ -49,7 +49,8 @@ def maybe_revert_translation_on_uninstall(context=...):
     logger = prefs.logger
     if not isinstance(context.space_data, bpy.types.SpacePreferences):
         # Attempting to revert emulation on exit crashes on Blender 5.1
-        logger.info(f"Unregistration looks like regular process exit, layout emulation won't be reverted")
+        if logger:  # It seems the preferences are no longer available at this point
+            logger.info(f"Unregistration looks like regular process exit, layout emulation won't be reverted")
         return
 
     success, msg = revert_keymap_translation(context)
